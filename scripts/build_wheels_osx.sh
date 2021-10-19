@@ -29,7 +29,7 @@ $PYTHON -m pip install numpy --upgrade
 $PYTHON -m pip install delocate --upgrade
 $PYTHON -m pip install twine  --upgrade
 $PYTHON -m pip install pytest  --upgrade
-$PYTHON -m pip install matplotlib --upgrade --pre --no-deps # temp fix for python3.10
+$PYTHON -m pip install matplotlib --upgrade
 $PYTHON -m pip install flaky  --upgrade
 
 PLATFORM=$($PYTHON -c "import distutils.util; print(distutils.util.get_platform())")
