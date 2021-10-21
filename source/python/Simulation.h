@@ -81,6 +81,8 @@ class Simulation
 
     bool isValid();
 
+    map<string, size_t> count() const;
+
     pair<vector<double>, vector<double>> getBoundaries(void);
 
     // Commands

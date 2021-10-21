@@ -22,7 +22,7 @@ frame_thickness 0
 
 mol 1 red u u u
 
-start_filament red
+start_filament_type red
 color red
 thickness 4
 polygon edge
@@ -31,7 +31,8 @@ standard_length 2
 standard_angle 0 0 0
 force_length 0
 force_angle 100 80 0
-end_filament
+end_filament_type
+
 
 filament red copy red2
 filament red copy red3

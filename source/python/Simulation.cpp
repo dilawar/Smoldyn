@@ -57,6 +57,24 @@ Simulation::getDim() const
     return (size_t)sim_->dim;
 }
 
+map<string, size_t>
+Simulation::count() const
+{
+    map<string, size_t> res{
+#ifdef ENABLE_PYTHON_CALLBACK
+        { "functions", sim_->ncallbacks },
+#endif
+        { "dim", sim_->dim },
+        { "variables", sim_->nvar }
+    };
+
+    res["species"] = sim_->mols ? sim_->mols->nspecies : 0;
+    res["compartment"] = sim_->cmptss ? sim_->cmptss->ncmpt : 0;
+    res["surface"] = sim_->srfss ? sim_->srfss->nsrf : 0;
+
+    return res;
+}
+
 bool
 Simulation::initialize()
 {

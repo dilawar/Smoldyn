@@ -38,6 +38,7 @@ extern int ThrowThreshold;
 extern FILE* LogFile;
 
 extern char ErrorString[];
+extern char ErrorLineAndString[];
 extern int ErrorType;
 extern char SimFlags[];
 
@@ -404,10 +405,17 @@ void filssfree(filamentssptr filss);
 void filssoutput(simptr sim);
 int filcheckparams(simptr sim,int *warnptr);
 
+// filament manipulation
+int filAddRandomSegments(filamentptr fil,int number,const char *xstr,const char *ystr,const char *zstr,double thickness);
+int filAddRandomBeads(filamentptr fil,int number,const char *xstr,const char *ystr,const char *zstr);
+
 // structure set up
-int filenablefilaments(simptr sim,int maxfil);
-filamentptr filreadstring(simptr sim,ParseFilePtr pfp,filamentptr fil,const char *word,char *line2);
-int filload(simptr sim,ParseFilePtr *pfpptr,char *line2);
+int filenablefilaments(simptr sim);
+filamentptr filAddFilament(filamenttypeptr filtype,filamentptr fil,const char *filname);
+filamenttypeptr filtypereadstring(simptr sim,ParseFilePtr pfp,filamenttypeptr filtype,const char *word,char *line2);
+filamentptr filreadstring(simptr sim,ParseFilePtr pfp,filamentptr fil,filamenttypeptr filtype,const char *word,char *line2);
+int filloadtype(simptr sim,ParseFilePtr *pfpptr,char *line2);
+int filloadfil(simptr sim,ParseFilePtr *pfpptr,char *line2,filamenttypeptr filtype);
 int filsupdate(simptr sim);
 
 // core simulation functions

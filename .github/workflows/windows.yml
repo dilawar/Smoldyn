@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.7,3.8,3.9]
+        python-version: ['3.7', '3.8', '3.9', '3.10.0']
     steps:
     - uses: actions/checkout@v2
     - name: "Setup Python ${{ matrix.python-version }}"
@@ -35,7 +35,7 @@ jobs:
         cd build
         PYTHON=$(which python)
         $PYTHON -m pip install pip --upgrade
-        $PYTHON -m pip install numpy pytest matplotlib setuptools
+        $PYTHON -m pip install numpy pytest matplotlib setuptools flaky
         cmake .. -DOPTION_PYTHON=ON -DOPTION_EXAMPLES=ON -DCMAKE_SYSTEM_VERSION=10.0.19041.0 -DPython3_EXECUTABLE=$PYTHON
         cmake --build . --config Release
         ctest -C Release
@@ -47,6 +47,3 @@ jobs:
         cd build
         python -m pip install twine --upgrade
         python -m twine upload -u __token__ -p "$SMOLDYN_PYPI_TOKEN" *.whl --skip-existing || echo "Failed to upload"
-    - name: Test released wheels
-      shell: bash
-      run: ./.ci/install_wheel_and_test.sh

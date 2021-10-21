@@ -44,6 +44,7 @@ void (*LoggingCallback)(simptr,int,const char*,...)=NULL;
 int ThrowThreshold=11;
 FILE *LogFile=NULL;
 char ErrorString[STRCHARLONG]="";
+char ErrorLineAndString[STRCHARLONG]="";
 int ErrorType=0;
 char SimFlags[STRCHAR]="";
 int VCellDefined=0;
@@ -96,7 +97,7 @@ void simSetThrowing(int corethreshold) {
 void simLog(simptr sim,int importance,const char* format, ...) {
 	char message[STRCHARLONG],*flags;
 	va_list arguments;
-	int qflag,vflag,wflag;
+	int qflag,vflag,wflag,sflag;
 	FILE *fptr;
 
 	va_start(arguments, format);
@@ -112,12 +113,14 @@ void simLog(simptr sim,int importance,const char* format, ...) {
 	if(sim) flags=sim->flags;
 	else flags=SimFlags;
 	qflag=strchr(flags,'q')?1:0;
+	sflag=strchr(flags,'s')?1:0;
 	vflag=strchr(flags,'v')?1:0;
 	wflag=strchr(flags,'w')?1:0;
-	if(vflag || importance>=2)
-		if(!qflag || importance>=5)
-			if(!wflag || importance<=4 || importance>=7)
-				fprintf(fptr,"%s", message);
+	if(!sflag)
+		if(vflag || importance>=2)
+			if(!qflag || importance>=5)
+				if(!wflag || importance<=4 || importance>=7)
+					fprintf(fptr,"%s", message);
 
 //??	if(importance>=ThrowThreshold) throw message;	//?? This is removed for now because I can't statically link Libsmoldyn if it's enabled
 
@@ -130,11 +133,13 @@ void simParseError(simptr sim,ParseFilePtr pfp) {
 
 	if(pfp) {
 		Parse_ReadFailure(pfp,parseerrstr);
+		sprintf(ErrorLineAndString,"%s\nMessage: %s",parseerrstr,ErrorString);
 		simLog(sim,8,"%s\nMessage: %s\n",parseerrstr,ErrorString);
 		if(strmatherror(matherrstr,1))
 			simLog(sim,8,"math error: %s\n",matherrstr); }
-	else
-		simLog(sim,8,"%s",ErrorString);
+	else {
+		sprintf(ErrorLineAndString,"%s",ErrorString);
+		simLog(sim,8,"%s",ErrorString); }
 	return; }
 
 
@@ -550,11 +555,12 @@ int simsettime(simptr sim,double time,int code) {
 /* simreadstring */
 int simreadstring(simptr sim,ParseFilePtr pfp,const char *word,char *line2) {
 	char nm[STRCHAR],nm1[STRCHAR],shapenm[STRCHAR],ch,rname[STRCHAR],fname[STRCHAR],pattern[STRCHAR];
+	char str1[STRCHAR],str2[STRCHAR],str3[STRCHAR];
 	char errstr[STRCHARLONG];
-	int er,i,nmol,d,i1,s,c,ll,order,*index;
-	int rulelist[MAXORDER+MAXPRODUCT],r,ord,rct,prd,itct,prt,lt,f,detailsi[8];
+	int er,i,nmol,d,i1,s,c,ll,order,*index,ft;
+	int rulelist[MAXORDER+MAXPRODUCT],r,ord,rct,prd,itct,prt,lt,detailsi[8];
 	long int pserno,sernolist[MAXPRODUCT];
-	double flt1,flt2,v1[DIMMAX*DIMMAX],v2[4],poslo[DIMMAX],poshi[DIMMAX];
+	double flt1,flt2,v1[DIMMAX*DIMMAX],v2[4],poslo[DIMMAX],poshi[DIMMAX],thick;
 	enum MolecState ms,rctstate[MAXORDER];
 	enum PanelShape ps;
 	enum RevParam rpart;
@@ -565,6 +571,8 @@ int simreadstring(simptr sim,ParseFilePtr pfp,const char *word,char *line2) {
 	surfaceptr srf;
 	portptr port;
 	filamentptr fil;
+	filamenttypeptr filtype;
+	filamentssptr filss;
 	long int li1;
 	listptrli lilist;
 	listptrv vlist;
@@ -1436,12 +1444,9 @@ int simreadstring(simptr sim,ParseFilePtr pfp,const char *word,char *line2) {
 	// filaments
 
 	else if(!strcmp(word,"max_filament")) {				// max_filament
-		itct=strmathsscanf(line2,"%mi",varnames,varvalues,nvar,&i1);
-		CHECKS(itct==1,"max_filament needs to be a number");
-		CHECKS(i1>=0,"max_filament must be at least 0");
-		CHECKS(filenablefilaments(sim,i1),"failed to enable filaments");
-		CHECKS(!strnword(line2,2),"unexpected text following max_filament"); }
+		CHECKS(0,"max_filament has been deprecated"); }
 
+/*
 	else if(!strcmp(word,"new_filament")) {				// new_filament
 		fil=filreadstring(sim,pfp,NULL,"name",line2);
 		CHECK(fil!=NULL); }
@@ -1457,6 +1462,48 @@ int simreadstring(simptr sim,ParseFilePtr pfp,const char *word,char *line2) {
 		fil=sim->filss->fillist[f];
 		fil=filreadstring(sim,pfp,fil,nm1,line2);
 		CHECK(fil!=NULL); }
+*/
+
+	else if(!strcmp(word,"random_filament")) {		// random_filament
+		CHECKS(sim->filss,"need to enter a filament type before random_filament");
+		filss=sim->filss;
+		itct=sscanf(line2,"%s %s",nm,nm1);
+		CHECKS(itct==2,"random_filament format: name type segments [x y z]");
+		ft=stringfind(filss->ftnames,filss->ntype,nm1);
+		CHECKS(ft>=0,"filament type is unknown");
+		filtype=filss->filtypes[ft];
+		fil=filAddFilament(filtype,NULL,nm);
+		CHECKS(fil,"unable to add filament to simulation");
+		line2=strnword(line2,3);
+
+		CHECKS(line2,"random_filament format: name type segments [x y z]");
+		itct=strmathsscanf(line2,"%mi",varnames,varvalues,nvar,&i1);
+		CHECKS(itct==1,"random_segments format: number [x y z] [thickness]");
+		CHECKS(i1>0,"number needs to be >0");
+		line2=strnword(line2,2);
+		if(fil->nbs==0) {
+			CHECKS(line2,"missing x y z position information");
+			itct=sscanf(line2,"%s %s %s",str1,str2,str3);
+			CHECKS(itct==3,"random_segments format: number [x y z] [thickness]");
+			line2=strnword(line2,4); }
+		else {
+			sprintf(str1,"%i",0);
+			sprintf(str2,"%i",0);
+			sprintf(str3,"%i",0); }
+		thick=1;
+		if(line2) {
+			itct=strmathsscanf(line2,"%mlg",varnames,varvalues,nvar,&thick);
+			CHECKS(itct==1,"random_segments format: number [x y z] [thickness]");
+			CHECKS(thick>0,"thickness needs to be >0");
+			line2=strnword(line2,2); }
+		if(filtype->isbead)
+			er=filAddRandomBeads(fil,i1,str1,str2,str3);
+		else
+			er=filAddRandomSegments(fil,i1,str1,str2,str3,thick);
+		CHECKS(er!=2,"random_segments positions need to be 'u' or value");
+		CHECKS(er==0,"BUG: error in filAddRandomsegments");
+		CHECKS(!line2,"unexpected text following random_segments"); }
+
 
 	// reactions
 
@@ -2083,6 +2130,8 @@ int loadsim(simptr sim,const char *fileroot,const char *filename,const char *fla
 	strncpy(sim->flags,flags,STRCHAR);
 	strcpy(SimFlags,flags);
 	done=0;
+	ErrorLineAndString[0]='\0';
+
 	pfp=Parse_Start(fileroot,filename,errstring);
 	CHECKS(pfp,"%s",errstring);
 	er=Parse_CmdLineArg(NULL,NULL,pfp);
@@ -2131,11 +2180,14 @@ int loadsim(simptr sim,const char *fileroot,const char *filename,const char *fla
 
 		else if(!strcmp(word,"start_bng")) {					// start_bng
 			er=loadbng(sim,&pfp,line2);
-                        if(er) return 1;
-                        er=bngupdate(sim); }
+			if(er) return 1;
+			er=bngupdate(sim); }
+
+		else if(!strcmp(word,"start_filament_type")) {	// start_filament_type
+			er=filloadtype(sim,&pfp,line2); }
 
 		else if(!strcmp(word,"start_filament")) {			// start_filament
-			er=filload(sim,&pfp,line2); }
+			er=filloadfil(sim,&pfp,line2,NULL); }
 
 		else if(!strcmp(word,"start_rules")) {				// start_rules
 			CHECKS(0,"Moleculizer support has been discontinued in Smoldyn"); }
@@ -2270,12 +2322,13 @@ int simupdate(simptr sim) {
 int simInitAndLoad(const char *fileroot,const char *filename,simptr *smptr,const char *flags, ValueProviderFactory* valueProviderFactory, AbstractMesh* mesh) {
 
 	simptr sim;
-	int er,qflag;
+	int er,qflag,sflag;
 
 	sim=*smptr;
 	if(!sim) {
 		qflag=strchr(flags,'q')?1:0;
-		if(!qflag) {
+		sflag=strchr(flags,'s')?1:0;
+		if(!qflag && !sflag) {
 			simLog(NULL,2,"--------------------------------------------------------------\n");
 			simLog(NULL,2,"Running Smoldyn %s\n",VERSION);
 			simLog(NULL,2,"\nCONFIGURATION FILE\n");
@@ -2306,12 +2359,13 @@ failure:
 /* simInitAndLoad */
 int simInitAndLoad(const char *fileroot,const char *filename,simptr *smptr,const char *flags) {
 	simptr sim;
-	int er,qflag;
+	int er,qflag,sflag;
 
 	sim=*smptr;
 	if(!sim) {
 		qflag=strchr(flags,'q')?1:0;
-		if(!qflag) {
+		sflag=strchr(flags,'s')?1:0;
+		if(!qflag && !sflag) {
 			simLog(NULL,2,"--------------------------------------------------------------\n");
 			simLog(NULL,2,"Running Smoldyn %s\n",VERSION);
 			simLog(NULL,2,"\nCONFIGURATION FILE\n");
@@ -2482,11 +2536,11 @@ int simulatetimestep(simptr sim) {
 
 /* endsimulate */
 void endsimulate(simptr sim,int er) {
-	int tflag,*eventcount;
+	int sflag,tflag,*eventcount;
 
 	gl2State(2);
-	//qflag=strchr(sim->flags,'q')?1:0;
 	tflag=strchr(sim->flags,'t')?1:0;
+	sflag=strchr(sim->flags,'s')?1:0;
 
 	simLog(sim,2,"\n");
 	if(er==1) simLog(sim,2,"Simulation complete\n");
@@ -2528,18 +2582,17 @@ void endsimulate(simptr sim,int er) {
   if(dontPrompt != NULL && strlen(dontPrompt) > 0)
     sim->quitatend = 1;
 
-  if(sim->graphss && sim->graphss->graphics>0 && !tflag && !sim->quitatend)
+  if(sim->graphss && sim->graphss->graphics>0 && !tflag && !sim->quitatend && !sflag)
     fprintf(stderr,"\nTo quit: Activate graphics window, then press shift-Q.\a\n");
   return; }
 
 
 /* smolsimulate */
 int smolsimulate(simptr sim) {
-	int er,qflag;
+	int er;
 
 	er=0;
-	qflag=strchr(sim->flags,'q')?1:0;
-	if(!qflag) simLog(sim,2,"Simulating\n");
+	simLog(sim,2,"Simulating\n");
 	sim->clockstt=time(NULL);
 	er=simdocommands(sim);
 	if(!er)

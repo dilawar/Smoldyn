@@ -39,8 +39,7 @@ RUN chmod +x xvfb-startup.sh
 ARG RESOLUTION="1920x1080x24"
 ARG XARGS=""
 ENV XVFB_RES="${RESOLUTION}" \
-    XVFB_ARGS="${XARGS}" \
-    DISPLAY=":1"
+    XVFB_ARGS="${XARGS}"
 
 # install Smoldyn and its dependencies
 COPY smoldyn*.whl /tmp/
@@ -48,6 +47,11 @@ RUN cd /tmp \
     && WHEEL_PATH=$(ls smoldyn*.whl) \
     && pip install "${WHEEL_PATH}[biosimulators]" \
     && rm smoldyn*.whl
+
+# fonts for matplotlib
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends libfreetype6 \
+    && rm -rf /var/lib/apt/lists/*
 
 # configure matplotlib
 RUN mkdir -p /.cache/matplotlib \
