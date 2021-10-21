@@ -127,11 +127,11 @@ if(OPTION_NSV)
 endif(OPTION_NSV)
 
 if(OPTION_USE_LIBTIFF)
-    list(APPEND CONAN_LIBS libtiff/4.2.0)
+    list(APPEND CONAN_LIBS libtiff/4.3.0)
     list(APPEND CONAN_OPTIONS libtiff:zstd=False
+        libtiff:jpeg=libjpeg
         libtiff:jbig=False
         libtiff:webp=False
-        libtiff:jpeg=False
         libtiff:libdeflate=False)
 endif()
 
@@ -144,7 +144,7 @@ if(OPTION_USE_ICONV)
 endif(OPTION_USE_ICONV)
 
 if(OPTION_PYTHON)
-    list(APPEND CONAN_LIBS pybind11/2.6.1)
+    list(APPEND CONAN_LIBS pybind11/2.7.1)
 endif(OPTION_PYTHON)
 
 #
@@ -157,7 +157,7 @@ conan_cmake_configure(REQUIRES ${CONAN_LIBS}
 conan_cmake_autodetect(settings)
 conan_cmake_install(PATH_OR_REFERENCE .
     BUILD missing
-    REMOTE conan-center
+    REMOTE conancenter
     SETTINGS ${settings})
 
 include(CheckCCompilerFlag)
