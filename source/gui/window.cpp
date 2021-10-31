@@ -79,8 +79,8 @@ inline ImVec2 _GetPos(float* pos, size_t dim)
 
 Window::Window(const char* name)
     : name_(name)
-    , width_(640)
-    , height_(640)
+    , width_(720)
+    , height_(720)
     , initialized_(false)
 {
 }
@@ -129,14 +129,17 @@ int Window::init()
     //
     // Create windows
     //
-    GLFWwindow* window = glfwCreateWindow(height_, width_, name_, NULL, NULL);
-    if (window == nullptr) {
+    assert(width_ > 30);
+    assert(height_ > 30);
+
+    window_ = glfwCreateWindow(width_, height_, name_, NULL, NULL);
+    if (window_ == nullptr) {
         fprintf(stderr, "Failed to create main windows.\n");
         initialized_ = false;
         return 1;
     }
 
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(window_);
     glfwSwapInterval(1); // Enable vsync
 
 #ifdef IMGUI_IMPL_OPENGL_LOADER_GL3W
@@ -154,15 +157,18 @@ int Window::init()
     // Setup Dear ImGui context.
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    glfwSwapInterval(1);
+
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags
-        |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard
+    // Controls
 
     // Setup Dear ImGui style
     // ImGui::StyleColorsDark();
     ImGui::StyleColorsClassic();
 
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     initialized_ = true;
@@ -244,6 +250,7 @@ int Window::render()
 
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -276,58 +283,15 @@ int Window::render()
         ImGui::End();
     }
 
-    // if (dim < 3)
-    //     render_molecules();
-
-#if 0
-    if (graphss->framepts) { // draw bounding box
-        pt1[0] = wlist[0]->pos;
-        pt2[0] = wlist[1]->pos;
-        pt1[1] = dim > 1 ? wlist[2]->pos : 0;
-        pt2[1] = dim > 1 ? wlist[3]->pos : 0;
-        pt1[2] = dim > 2 ? wlist[4]->pos : 0;
-        pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-        glColor4fv(gl2Double2GLfloat(graphss->framecolor, glf1, 4));
-        glLineWidth((GLfloat)graphss->framepts);
-        gl2DrawBoxD(pt1, pt2, dim);
-    }
-
-    if (graphss->gridpts) {
-        pt1[0] = sim_->boxs->min[0];
-        pt2[0] = pt1[0] + sim_->boxs->size[0] * sim_->boxs->side[0];
-        pt1[1] = dim > 1 ? sim_->boxs->min[1] : 0;
-        pt2[1] = dim > 1 ? pt1[1] + sim_->boxs->size[1] * sim_->boxs->side[1] : 0;
-        pt1[2] = dim > 2 ? sim_->boxs->min[2] : 0;
-        pt2[2] = dim > 2 ? pt1[2] + sim_->boxs->size[2] * sim_->boxs->side[2] : 0;
-        glColor4fv(gl2Double2GLfloat(graphss->gridcolor, glf1, 4));
-        if (dim == 1)
-            glPointSize((GLfloat)graphss->gridpts);
-        else
-            glLineWidth((GLfloat)graphss->gridpts);
-        gl2DrawGridD(pt1, pt2, sim_->boxs->side, dim);
-    }
-
-    if (dim < 3)
-        RenderMolecs(sim);
-
-    if (sim_->srfss)
-        RenderSurfaces(sim);
-    if (sim_->filss)
-        RenderFilaments(sim);
-    if (sim_->latticess)
-        RenderLattice(sim);
-    if (graphss->ntextitems)
-        RenderText(sim);
-    glutSwapBuffers();
-#endif
-
     ImGui::Render();
-    int display_w, display_h;
+    assert(window_);
+
+    int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
-    // glViewport(0, 0, display_w, display_h);
-    // glClearColor(clear_color.x * clear_color.w, clear_color.y *
-    // clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-    // glClear(GL_COLOR_BUFFER_BIT);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
+        clear_color.z * clear_color.w, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 
