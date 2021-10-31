@@ -7,12 +7,6 @@
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 REQUIRED)
 
-if(OPTION_USE_IMGUI)
-    find_package(imgui CONFIG)
-    find_package(glfw3 CONFIG)
-    find_package(glew CONFIG)
-endif()
-
 # recompile libsmoldyn for PYTHON module.
 add_library(_pysmoldyn STATIC ${SRC_FILES}
     $<TARGET_OBJECTS:Steve>

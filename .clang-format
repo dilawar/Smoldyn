@@ -1,8 +1,8 @@
 ---
-BasedOnStyle: Mozilla
-ColumnLimit: 90
+BasedOnStyle: Webkit
+SortIncludes: false
+ColumnLimit: 80
 IndentWidth: 4
 AlignAfterOpenBracket: false
 AlignTrailingComments: true
 ...
-
