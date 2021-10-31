@@ -108,11 +108,11 @@ message(STATUS "Option to build documentation: ${OPTION_DOCS}")
 # conan package manager.
 #
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-find_program(CONAN conan HINTS $ENV{HOME}/.local/bin)
-if(NOT CONAN)
-    message(STATUS "Installing conan using python3-pip")
-    execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install conan)
-endif()
+
+find_program(CONAN_COMMAND conan HINTS 
+    "C:/Program Files/Conan/conan"
+    $ENV{HOME}/.local/bin)
+
 include(${CMAKE_SOURCE_DIR}/cmake/conan.cmake)
 
 # location of generated cmake modules
