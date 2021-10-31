@@ -18,7 +18,7 @@ for PYDIR in $PYDIR310 $PYDIR39 $PYDIR38 $PYDIR37; do
     PYTHON=$PYDIR/bin/python
 
     # dependencies
-    $PYTHON -m pip install auditwheel pytest
+    $PYTHON -m pip install auditwheel pytest conan
     rm -rf _build_wheel_linux
     mkdir _build_wheel_linux
     (
