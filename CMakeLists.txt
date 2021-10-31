@@ -482,6 +482,12 @@ if(OPTION_VTK)
     list(APPEND DEP_LIBS ${VTK_LIBRARIES})
 endif(OPTION_VTK)
 
+####### Option: Immediate Mode GUI ##############
+if (OPTION_USE_IMGUI)
+    add_subdirectory(source/gui)
+    list(APPEND DEP_LIBS gui)
+endif (OPTION_USE_IMGUI)
+
 
 ####### Option: Build with NextSubvolume ##########
 
