@@ -111,7 +111,7 @@ message(STATUS "Option to build documentation: ${OPTION_DOCS}")
 #
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-find_program(CONAN_COMMAND conan HINTS 
+find_program(CONAN_COMMAND conan HINTS
     "C:/Program Files/Conan/conan"
     $ENV{HOME}/.local/bin)
 
@@ -138,7 +138,8 @@ if(OPTION_USE_LIBTIFF)
 endif()
 
 if(OPTION_USE_IMGUI)
-    list(APPEND CONAN_LIBS imgui/1.85 glfw/3.3.4)
+    add_definitions(-DUSE_IMGUI)
+    list(APPEND CONAN_LIBS imgui/1.85 glfw/3.3.4 glew/2.2.0)
 endif()
 
 if(OPTION_USE_ZLIB)
@@ -484,8 +485,15 @@ endif(OPTION_VTK)
 
 ####### Option: Immediate Mode GUI ##############
 if (OPTION_USE_IMGUI)
-    add_subdirectory(source/gui)
-    list(APPEND DEP_LIBS gui)
+    find_package(imgui REQUIRED)
+    find_package(glfw3 REQUIRED)
+    find_package(GLEW REQUIRED)
+    list(APPEND DEP_LIBS imgui::imgui glfw::glfw GLEW::GLEW)
+    list(APPEND SRC_FILES
+        ${imgui_RES_DIRS}/bindings/imgui_impl_glfw.cpp
+        ${imgui_RES_DIRS}/bindings/imgui_impl_opengl3.cpp)
+    # add_subdirectory(source/gui)
+    include_directories(${imgui_RES_DIRS}/bindings)
 endif (OPTION_USE_IMGUI)
 
 

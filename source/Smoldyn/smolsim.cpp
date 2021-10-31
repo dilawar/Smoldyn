@@ -15,7 +15,7 @@
 
 #include "List.h"
 #include "math2.h"
-#include "opengl2.h"
+#include "../libSteve/opengl2.h"
 #include "random2.h"
 #include "Rn.h"
 #include "SimCommand.h"
