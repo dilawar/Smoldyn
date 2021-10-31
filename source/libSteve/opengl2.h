@@ -58,7 +58,7 @@ extern "C" {
 	#endif
 
 #else
-	#define GLfloat float
+	typedef float GLfloat;
 	#undef __gl_h			//?? I think this is a good thing
 
 #endif
