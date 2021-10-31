@@ -55,10 +55,14 @@
 /* main */
 int main(int argc, char** argv)
 {
+
+#ifdef USE_BOOST_LOG
+    init_logger();
+#endif
     int exitCode = 0;
 
 #ifdef USE_IMGUI
-    smoldyn::Window win { "Smoldyn" };
+    smoldyn::Window win("Smoldyn");
     win.init();
 #endif
 

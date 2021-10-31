@@ -4,47 +4,14 @@
 //  Author:  Dilawar Singh <dilawar.s.rajput@gmail.com>
 //
 
-#include <cstdio>
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-
-//
-// Various ways to load OpenGL. We are using GLEW as default.
-//
-#define IMGUI_IMPL_OPENGL_LOADER_GLEW
-
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-#include <GL/gl3w.h> // Initialize with gl3wInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <GL/glew.h> // Initialize with glewInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-#include <glad/glad.h> // Initialize with gladLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-#include <glad/gl.h> // Initialize with gladLoadGL(...) or gladLoaderLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
-#define GLFW_INCLUDE_NONE // GLFW including OpenGL headers causes ambiguity or
-                          // multiple definition errors.
-#include <glbinding/Binding.h> // Initialize with glbinding::Binding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
-#define GLFW_INCLUDE_NONE // GLFW including OpenGL headers causes ambiguity or
-                          // multiple definition errors.
-#include <glbinding/glbinding.h> // Initialize with glbinding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#else
-#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#endif
-
-#include <GLFW/glfw3.h>
+#include "window.h"
 
 #include "../Smoldyn/smoldyn.h"
 #include "../Smoldyn/smoldynfuncs.h"
 
-#include "window.h"
+#define COLOR_BLACK IM_COL32(0, 0, 0, 255)
+#define COLOR_RED IM_COL32(255, 0, 0, 255)
+#define COLOR_WHITE IM_COL32(255, 255, 255, 255)
 
 namespace smoldyn {
 
@@ -56,33 +23,14 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-inline ImVec4 _GetColorVec(float* clr)
-{
-    return ImVec4 { clr[0], clr[1], clr[2], clr[3] };
-}
-
-inline ImU32 _GetColor(float* clr)
-{
-    return ImGui::GetColorU32(_GetColorVec(clr));
-}
-
-inline ImVec2 _GetPos(float* pos, size_t dim)
-{
-    if (dim == 1)
-        return ImVec2(pos[0], 0);
-    if (dim == 2)
-        return ImVec2(pos[0], pos[1]);
-    if (dim == 3)
-        return ImVec2(pos[0], pos[1]);
-    fprintf(stderr, "dim=%d is not supported.\n", dim);
-}
-
 Window::Window(const char* name)
     : name_(name)
-    , width_(720)
-    , height_(720)
+    , arena_({ 480.0f, 480.f })
     , initialized_(false)
+    , frame_rate_(20.0f)
+    , canvas_to_arena_ratio_(1.5)
 {
+    update_canvas_size();
 }
 
 Window::~Window()
@@ -95,6 +43,19 @@ Window::~Window()
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
+}
+
+void Window::update_canvas_size()
+{
+    canvas_[0] = canvas_to_arena_ratio_ * arena_[0];
+    canvas_[1] = canvas_to_arena_ratio_ * arena_[1];
+}
+
+void Window::set_arena(float width, float height)
+{
+    arena_[0] = width;
+    arena_[1] = height;
+    update_canvas_size();
 }
 
 int Window::init()
@@ -125,14 +86,14 @@ int Window::init()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 #endif
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
     //
     // Create windows
     //
-    assert(width_ > 30);
-    assert(height_ > 30);
+    window_ = glfwCreateWindow(
+        canvas_[0], canvas_[1], "Smoldyn Window", NULL, NULL);
 
-    window_ = glfwCreateWindow(width_, height_, name_, NULL, NULL);
     if (window_ == nullptr) {
         fprintf(stderr, "Failed to create main windows.\n");
         initialized_ = false;
@@ -160,13 +121,12 @@ int Window::init()
     glfwSwapInterval(1);
 
     ImGuiIO& io = ImGui::GetIO();
-
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard
-    // Controls
+    io.ConfigFlags
+        |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 
     // Setup Dear ImGui style
-    // ImGui::StyleColorsDark();
-    ImGui::StyleColorsClassic();
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsClassic();
 
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -184,23 +144,50 @@ int Window::simulate(simptr sim)
 
     sim->clockstt = time(NULL);
     er = simdocommands(sim);
+
     if (!er) {
 
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2(width_, height_);
-        // io.DeltaTime = 1.0f / 60.0f;
+        io.DisplaySize = ImVec2(canvas_[0], canvas_[1]);
+        io.DeltaTime = 1.0f / frame_rate_;
 
-        // unsigned char* tex_pixels = nullptr;
-        // int tex_w, tex_h;
-        // io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+        unsigned char* tex_pixels = nullptr;
+        int tex_w, tex_h;
+        io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+
+        // background color = white
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1, 1, 1, 1));
 
         while ((er = simulatetimestep(sim)) == 0) {
-            render();
-            fprintf(stderr, ">> Simulation step done...\n");
+            sim->elapsedtime += difftime(time(NULL), sim->clockstt);
+            render_scene();
         }
     }
-    sim->elapsedtime += difftime(time(NULL), sim->clockstt);
     return er;
+}
+
+void Window::draw_limits()
+{
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    float pos[2] = { 0, 0 };
+    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_BLACK, 16.f);
+
+    pos[0] = -0.5;
+    pos[1] = -0.5;
+    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
+
+    pos[0] = 0.5;
+    pos[1] = -0.5;
+    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
+
+    pos[0] = 0.5;
+    pos[1] = 0.5;
+    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
+
+    pos[0] = -0.5;
+    pos[1] = 0.5;
+    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
 }
 
 int Window::render_molecules()
@@ -211,13 +198,15 @@ int Window::render_molecules()
     auto dim = sim_->dim;
     auto mols = sim_->mols;
 
-    if (!mols)
+    if (!mols) {
         return 1;
+    }
 
-    // auto midp = GetCenter();
-    auto drawlist = ImGui::GetWindowDrawList();
+    // draw_limits();
 
-    if (1 == sim_->graphss->graphics) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    // if (1 == sim_->graphss->graphics)
+    {
         for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
             if (sim_->mols->listtype[ll] == MLTsystem) {
                 for (auto m = 0; m < mols->nl[ll]; m++) {
@@ -226,20 +215,28 @@ int Window::render_molecules()
                     ms = mptr->mstate;
 
                     if (mols->display[i][ms] > 0) {
-                        drawlist->AddCircleFilled(
-                            _GetPos((float*)mptr->pos, dim),
-                            mols->display[i][ms],
-                            _GetColor((float*)mols->color[i][ms]));
+
+                        const auto pos = _GetPos(mptr->pos, dim);
+                        const auto size = scalexy(mols->display[i][ms]);
+                        const auto clr = _GetColor(mols->color[i][ms]);
+                        // const auto clr = IM_COL32(255, 255, 0, 255);
+                        // printf("pos (%f,%f), clr=%d, size=%f\n", pos.x,
+                        // pos.y, clr, size);
+                        draw_list->AddCircleFilled(pos, size, clr, 32.f);
                     }
                 }
             }
         }
     }
+
     return 0;
 }
 
-int Window::render()
+int Window::render_scene()
 {
+    static int counter = 0;
+    counter += 1; // number of frames.
+
     auto graphss = sim_->graphss;
     if (!graphss || graphss->graphics == 0) {
         fprintf(stderr, "No graphics element found: %d.\n", graphss->graphics);
@@ -255,43 +252,30 @@ int Window::render()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
+    ImGui::SetNextWindowPos({0, 0}, 0);
+    ImGui::Begin(name_);
+
     {
+        ImGui::TextColored({ 0, 0, 0, 1 }, "Frame=%d, Time=%06.2fs.", counter,
+            sim_->elapsedtime);
 
-        static float f = 0.0f;
-        static int counter = 0;
-
-        ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!"
-                                       // and append into it.
-
-        ImGui::Text("This is some useful text."); // Display some text (you can
-                                                  // use a format strings too)
-
-        ImGui::SliderFloat("float", &f, 0.0f,
-            1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color",
-            (float*)&clear_color); // Edit 3 floats representing a color
-
-        if (ImGui::Button(
-                "Button")) // Buttons return true when clicked (most widgets
-                           // return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
+        // Render the scene now.
+        render_molecules();
     }
 
+    ImGui::End(); // End of window.
+
     ImGui::Render();
-    assert(window_);
 
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
+
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
         clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
+
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 
