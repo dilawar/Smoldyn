@@ -55,7 +55,7 @@ public:
 
     int simulate(simptr sim);
 
-    int render_molecules();
+    int render_molecules(ImDrawList* drawlist);
 
     int render_scene();
 
@@ -115,11 +115,15 @@ public:
     inline ImVec2 _GetPos(T* const pos, size_t dim)
     {
         if (dim == 1)
-            return ImVec2(X(pos[0]), 0);
+            return ImVec2(X(pos[0]), canvas_[1] / 2);
         if (dim == 2)
             return ImVec2(X(pos[0]), Y(pos[1]));
-        if (dim == 3)
-            return ImVec2(X(pos[0]), Y(pos[1]));
+        if (dim == 3) {
+            // 3d to 2d projection.
+            auto f = 5;
+            return ImVec2(
+                X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
+        }
         fprintf(stderr, "dim=%d is not supported.\n", dim);
     }
 

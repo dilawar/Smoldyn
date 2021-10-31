@@ -2130,7 +2130,6 @@ void smolsimulategl(simptr sim)
     er = simdocommands(sim);
     if (er)
         endsimulate(sim, er);
-
     glutDisplayFunc(RenderScene);
     glutMainLoop();
 #else

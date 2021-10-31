@@ -190,11 +190,8 @@ void Window::draw_limits()
     draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
 }
 
-int Window::render_molecules()
+int Window::render_molecules(ImDrawList* drawlist)
 {
-    moleculeptr mptr;
-    enum MolecState ms;
-
     auto dim = sim_->dim;
     auto mols = sim_->mols;
 
@@ -204,25 +201,24 @@ int Window::render_molecules()
 
     // draw_limits();
 
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
     // if (1 == sim_->graphss->graphics)
     {
         for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
             if (sim_->mols->listtype[ll] == MLTsystem) {
                 for (auto m = 0; m < mols->nl[ll]; m++) {
-                    mptr = mols->live[ll][m];
+                    auto mptr = mols->live[ll][m];
                     auto i = mptr->ident;
-                    ms = mptr->mstate;
+                    auto ms = mptr->mstate;
 
                     if (mols->display[i][ms] > 0) {
 
                         const auto pos = _GetPos(mptr->pos, dim);
                         const auto size = scalexy(mols->display[i][ms]);
                         const auto clr = _GetColor(mols->color[i][ms]);
-                        // const auto clr = IM_COL32(255, 255, 0, 255);
+
                         // printf("pos (%f,%f), clr=%d, size=%f\n", pos.x,
                         // pos.y, clr, size);
-                        draw_list->AddCircleFilled(pos, size, clr, 32.f);
+                        drawlist->AddCircleFilled(pos, size, clr, 32.f);
                     }
                 }
             }
@@ -245,6 +241,9 @@ int Window::render_scene()
 
     auto dim = sim_->dim;
 
+    double pt1[DIMMAX], pt2[DIMMAX];
+    float glf1[4];
+
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     glfwPollEvents();
@@ -253,21 +252,49 @@ int Window::render_scene()
     ImGui::NewFrame();
 
     ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
-    ImGui::SetNextWindowPos({0, 0}, 0);
+    ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
+
+    ImDrawList* drawlist = ImGui::GetWindowDrawList();
 
     {
         ImGui::TextColored({ 0, 0, 0, 1 }, "Frame=%d, Time=%06.2fs.", counter,
             sim_->elapsedtime);
 
         // Render the scene now.
-        render_molecules();
+        if (3 == dim)
+            render_molecules(drawlist);
+
+        // draw bounding box.
+        if (graphss->framepts) {
+            // draw bounding box
+            const auto wlist = sim_->wlist;
+            pt1[0] = wlist[0]->pos;
+            pt2[0] = wlist[1]->pos;
+            pt1[1] = dim > 1 ? wlist[2]->pos : 0;
+            pt2[1] = dim > 1 ? wlist[3]->pos : 0;
+            pt1[2] = dim > 2 ? wlist[4]->pos : 0;
+            pt2[2] = dim > 2 ? wlist[5]->pos : 0;
+
+            // glColor4fv(gl2Double2GLfloat(graphss->framecolor, glf1, 4));
+            // glLineWidth((GLfloat)graphss->framepts);
+            // gl2DrawBoxD(pt1, pt2, dim);
+            for (size_t i = 0; i < dim - 1; ++i) {
+
+                printf(" %f %f -> %f %f\n", pt1[i], pt1[i+1], pt2[i],
+                    pt2[i + 1]);
+
+                drawlist->AddLine(
+                    { pt1[i], pt2[i] }, { pt1[i + 1], pt2[i + 1] }, COLOR_RED);
+            }
+        }
     }
 
     ImGui::End(); // End of window.
 
     ImGui::Render();
-
+#if 0
+    // Not sure if these are neccessary.
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
@@ -275,7 +302,7 @@ int Window::render_scene()
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
         clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
-
+#endif
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 
