@@ -40,8 +40,15 @@ using namespace gl;
 #endif
 
 #include <GLFW/glfw3.h>
+#include <array>
+#include <memory>
+
+#ifdef USE_FMT
+#include <fmt/core.h>
+#endif
 
 #include "smoldyn.h"
+#include "common.h"
 
 namespace smoldyn {
 
@@ -55,9 +62,11 @@ public:
 
     int simulate(simptr sim);
 
-    int render_molecules(ImDrawList* drawlist);
-
     int render_scene();
+
+    int render_molecules();
+
+    int render_grid();
 
     int init();
     int clear();
@@ -68,18 +77,28 @@ public:
     void draw_limits(); // debug
 
     /**
+     * Draw a box.
+     */
+    void draw_box_d(const std::array<float, DIMMAX>& pt1,
+        const std::array<float, DIMMAX>& pt2);
+
+    /**
      * Scaling function.
      *
      * Given arena size and dimension, compute pixel value for a given float.
      */
     template <typename T = double, typename U = float> U scalex(const T x)
     {
+        if (! isArenaNormalized())
+            return U(x);
         return U(arena_[0] * x / 2.0);
     }
 
     template <typename T = double, typename U = float> U scaley(const T y)
     {
-        return U(arena_[1] * y / 2.0);
+        if (! isArenaNormalized())
+            return U(y);
+        return U(arena_[1] * y / 2.0f);
     }
 
     template <typename T = double, typename U = float> U scalexy(const T x)
@@ -100,38 +119,36 @@ public:
      */
     template <typename T = double, typename U = float> U X(const T x)
     {
-        const auto f = 1 / canvas_to_arena_ratio_;
+        if (! isArenaNormalized())
+            return U(x + canvas_[0] / 2.0f);
+
+        const auto f = 1.f / canvas_to_arena_ratio_;
         U _t = U((x + 1) / 2.0 * canvas_[0]);
-        // return _t;
         return (f * _t) + (1 - f) * canvas_[0] / 2.0;
     }
 
     template <typename T = double, typename U = float> U Y(const T y)
     {
-        const auto f = 1 / canvas_to_arena_ratio_;
+        if (! isArenaNormalized())
+            return U(y + canvas_[1] / 2.0);
+
+        const auto f = 1.f / canvas_to_arena_ratio_;
         U _t = U((y + 1) / 2.0 * canvas_[1]);
         return (f * _t) + (1 - f) * canvas_[1] / 2.0;
     }
 
     /**
-     * Get r,g,b,a vector where r, g, b, a ∈ (0, 255) while the input vector
-     * has range of (-1, 1).
+     * Get the graphics type. Scaling functions uses this information.
      */
-    template <typename T = double> inline ImVec4 _GetColorVec(T* const clr)
-    {
-        // printf(">> clr %f %f %f %f\n", clr[0], clr[1], clr[2], clr[3]);
-        // fixme: The A value has to be substracted from 1.0
-
-        return ImVec4 { 255 * float(clr[0]), 255 * float(clr[1]),
-            255 * float(clr[2]), 255 * (1 - float(clr[3])) };
-    }
+    int getGraphicsType() const { return sim_->graphss->graphics; }
 
     /**
-     * Helper function to convert a 4-array to ImGui color.
+     * If the boundary of simuilation are between -1 and 1, we call the arena
+     * normalized. In this case, we need to map (-1, 1) to (H, W).
      */
-    template <typename T = double> ImU32 _GetColor(T* const clr)
+    inline bool isArenaNormalized() const
     {
-        return ImGui::GetColorU32(_GetColorVec<T>(clr));
+        return false;
     }
 
     /**
@@ -144,7 +161,7 @@ public:
     inline ImVec2 _GetPos(T* const pos, size_t dim)
     {
         if (dim == 1)
-            return ImVec2(X(pos[0]), canvas_[1] / 2);
+            return ImVec2(X(pos[0]), canvas_[1] / 2.f);
         if (dim == 2)
             return ImVec2(X(pos[0]), Y(pos[1]));
         if (dim == 3) {
@@ -153,13 +170,40 @@ public:
             return ImVec2(
                 X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
         }
-        fprintf(stderr, "dim=%d is not supported.\n", dim);
+#if USE_FMT
+        fmt::print(stderr, "dim={} is not supported.\n", dim);
+#endif
+        return ImVec2();
+    }
+
+    /**
+     * Convert a double* to ImVec2
+     */
+    template <typename T = double>
+    inline ImVec2 toImVec2(T* const pos, size_t dim)
+    {
+        if (dim == 1)
+            return ImVec2(X(pos[0]), canvas_[1] / 2);
+
+        if (dim == 2)
+            return ImVec2(X(pos[0]), Y(pos[1]));
+
+        auto f = 5;
+        if (dim == 3) {
+            // 3d to 2d projection.
+            return ImVec2(
+                X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
+        }
+#if USE_FMT
+        fmt::print(stderr, "We should not be here: dim={}", dim);
+#endif
+        return ImVec2();
     }
 
 private:
     /* data */
     const char* name_;
-    simptr sim_;
+    std::shared_ptr<simstruct> sim_;
 
     GLFWwindow* window_;
     int error_code_;
@@ -167,8 +211,8 @@ private:
     bool initialized_;
     float frame_rate_;
 
-    float arena_[2];  // size of simulation space.
-    float canvas_[2]; // Size of canvas. Usually 2x of arena_
+    std::array<float, 2> arena_;  // size of simulation space.
+    std::array<float, 2> canvas_; // Size of canvas. Usually 2x of arena_
 
     float canvas_to_arena_ratio_;
 };

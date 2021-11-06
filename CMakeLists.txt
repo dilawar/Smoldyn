@@ -67,7 +67,7 @@ option(OPTION_USE_ZLIB "Build with Zlib support" OFF)
 option(OPTION_PYTHON  "Build Python module" ON)
 option(OPTION_EXAMPLES "Run Libsmoldyn tests" OFF)
 option(OPTION_DOCS "Generate documentation" OFF)
-
+option(OPTION_USE_FMT "Use fmt library" ON)
 
 #
 # Developer options. Enables Address Sanitizer to detects memory leak etc. Most
@@ -135,6 +135,10 @@ if(OPTION_USE_LIBTIFF)
         libtiff:jbig=False
         libtiff:webp=False
         libtiff:libdeflate=False)
+endif()
+
+if(OPTION_USE_FMT)
+    list(APPEND CONAN_LIBS fmt/8.0.1)
 endif()
 
 if(OPTION_USE_IMGUI)

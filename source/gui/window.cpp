@@ -9,11 +9,14 @@
 #include "../Smoldyn/smoldyn.h"
 #include "../Smoldyn/smoldynfuncs.h"
 
-#define COLOR_BLACK IM_COL32(0, 0, 0, 255)
-#define COLOR_RED IM_COL32(255, 0, 0, 255)
-#define COLOR_WHITE IM_COL32(255, 255, 255, 255)
+#include <fmt/ranges.h>
 
 namespace smoldyn {
+
+/**
+ * Approximate a circle with this many linear segments.
+ */
+constexpr float NUM_SEGMENT_IN_CIRCLE = 16.0f;
 
 //
 // ImGUi callback.
@@ -126,8 +129,8 @@ int Window::init()
         |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    // ImGui::StyleColorsClassic();
+    // ImGui::StyleColorsDark();
+    ImGui::StyleColorsClassic();
 
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -139,7 +142,7 @@ int Window::init()
 int Window::simulate(simptr sim)
 {
     int er;
-    sim_ = sim;
+    sim_.reset(sim);
 
     simLog(sim, 2, "Simulating\n");
 
@@ -152,12 +155,15 @@ int Window::simulate(simptr sim)
         io.DisplaySize = ImVec2(canvas_[0], canvas_[1]);
         io.DeltaTime = 1.0f / frame_rate_;
 
+        ImGui::GetStyle().ScaleAllSizes(2.f);
+
         unsigned char* tex_pixels = nullptr;
         int tex_w, tex_h;
         io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
 
         // background color = white
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1, 1, 1, 1));
+        ImGui::PushStyleColor(
+            ImGuiCol_WindowBg, ImVec4(1.0f, 1.0f, 1.0f, 0.1f));
 
         size_t nFrame = 0;
         while ((er = simulatetimestep(sim)) == 0) {
@@ -193,34 +199,37 @@ void Window::draw_limits()
     draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
 }
 
-int Window::render_molecules(ImDrawList* drawlist)
+int Window::render_molecules()
 {
     auto dim = sim_->dim;
-    auto mols = sim_->mols;
 
-    if (!mols) {
+    if (!sim_->mols) {
         return 1;
     }
 
-    // if (1 == sim_->graphss->graphics)
-    {
-        for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
-            if (sim_->mols->listtype[ll] == MLTsystem) {
-                for (auto m = 0; m < mols->nl[ll]; m++) {
-                    auto mptr = mols->live[ll][m];
-                    auto i = mptr->ident;
-                    auto ms = mptr->mstate;
+    ImDrawList* drawlist = ImGui::GetWindowDrawList();
 
-                    if (mols->display[i][ms] > 0) {
+    for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
+        if (sim_->mols->listtype[ll] == MLTsystem) {
+            for (auto m = 0; m < sim_->mols->nl[ll]; m++) {
+                auto mptr = sim_->mols->live[ll][m];
+                auto i = mptr->ident;
+                auto ms = mptr->mstate;
 
-                        const auto pos = _GetPos(mptr->pos, dim);
-                        const auto size = scalexy(mols->display[i][ms]);
-                        const auto clr = _GetColor(mols->color[i][ms]);
+                if (sim_->mols->display[i][ms] > 0) {
 
-                        // printf("pos (%f,%f), clr=%d, size=%f\n", pos.x,
-                        // pos.y, clr, size);
-                        drawlist->AddCircleFilled(pos, size, clr, 16.f);
-                    }
+                    const auto pos = _GetPos(mptr->pos, dim);
+                    const auto size = scalexy(sim_->mols->display[i][ms]);
+                    const auto clr = ArrToColor(sim_->mols->color[i][ms]);
+
+#if USE_FMT
+#if 0
+                    fmt::print("pos ({},{}), clr={}, size={}.\n", pos.x, pos.y,
+                        clr, size);
+#endif
+#endif
+                    drawlist->AddCircleFilled(pos, size / 2.0 /* radius */, clr,
+                        NUM_SEGMENT_IN_CIRCLE);
                 }
             }
         }
@@ -240,14 +249,17 @@ int Window::render_scene()
 
     auto graphss = sim_->graphss;
     if (!graphss || graphss->graphics == 0) {
-        fprintf(stderr, "No graphics element found: %d.\n", graphss->graphics);
+#if USE_FMT
+        fmt::print(
+            stderr, "No graphics element found: {}.\n", graphss->graphics);
+#endif
         return 1;
     }
 
+    //
+    // render only every graphss->graphssit frame.
+    //
     if (nthframe == graphss->graphicit) {
-        //
-        // render only every graphss->graphssit frame.
-        //
         nthframe = 0;
         render = true;
     }
@@ -256,11 +268,7 @@ int Window::render_scene()
         return -1;
 
     auto dim = sim_->dim;
-
-    float pt1[DIMMAX], pt2[DIMMAX];
     float glf1[4];
-
-    static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
@@ -271,23 +279,24 @@ int Window::render_scene()
     ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
 
-    ImDrawList* drawlist = ImGui::GetWindowDrawList();
-
     {
-        ImGui::TextColored({ 0, 0, 0, 1 }, "Frame=%d, Time=%06.2fs.", counter,
-            sim_->elapsedtime);
+        ImGui::TextColored({ 0.f, 0.f, 0.f, 1.f },
+            fmt::format(
+                "(dim={}) Frame={}, Time={}s.", dim, counter, sim_->elapsedtime)
+                .c_str());
 
         //
         // Render the scene now.
         //
 
         // Render molecules.
-        render_molecules(drawlist);
+        render_molecules();
 
-#if 1
+        //
         // draw bounding box.
+        //
         if (graphss->framepts) {
-            // draw bounding box
+            std::array<float, DIMMAX> pt1, pt2;
             const auto wlist = sim_->wlist;
             pt1[0] = wlist[0]->pos;
             pt2[0] = wlist[1]->pos;
@@ -295,39 +304,102 @@ int Window::render_scene()
             pt2[1] = dim > 1 ? wlist[3]->pos : 0;
             pt1[2] = dim > 2 ? wlist[4]->pos : 0;
             pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-
-            // glColor4fv(gl2Double2GLfloat(graphss->framecolor, glf1, 4));
-            // glLineWidth((GLfloat)graphss->framepts);
-            // gl2DrawBoxD(pt1, pt2, dim);
-            for (size_t i = 0; i < dim - 1; ++i) {
-
-                printf(" %f %f -> %f %f\n", pt1[i], pt1[i + 1], pt2[i],
-                    pt2[i + 1]);
-
-                drawlist->AddLine(
-                    { pt1[i], pt2[i] }, { pt1[i + 1], pt2[i + 1] }, COLOR_RED);
-            }
+            draw_box_d(pt1, pt2);
         }
-#endif
+
+        if (graphss->gridpts)
+            render_grid();
     }
 
     ImGui::End(); // End of window.
 
     ImGui::Render();
-#if 0
-    // Not sure if these are neccessary.
+
+    //
+    // Clean the window.
+    //
+    static ImVec4 resetclr = ImVec4(1.f, 1.f, 1.f, 1.00f);
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
-        clear_color.z * clear_color.w, clear_color.w);
+    glClearColor(resetclr.x * resetclr.w, resetclr.y * resetclr.w,
+        resetclr.z * resetclr.w, resetclr.w);
     glClear(GL_COLOR_BUFFER_BIT);
-#endif
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 
     return 0;
+}
+
+void Window::draw_box_d(
+    const std::array<float, DIMMAX>& pt1, const std::array<float, DIMMAX>& pt2)
+{
+    const auto dim = sim_->dim;
+    const auto clr = ArrToColor(sim_->graphss->framecolor);
+    const auto width = float(sim_->graphss->framepts);
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    if (dim == 1) {
+        ImVec2 p1 { pt1[0], pt1[1] };
+        ImVec2 p2 { pt2[0], pt1[1] };
+        drawList->AddLine(p1, p2, clr, width);
+        return;
+    }
+
+    if (dim == 2) {
+        auto v1 = toImVec2(pt1.data(), dim);
+        auto v2 = toImVec2(pt2.data(), dim);
+        drawList->AddRect(v1, v2, clr, width);
+        return;
+    }
+
+    fmt::print(stderr, "Not implemented yet.");
+
+#if 0
+    glVertex3d(pt1[0], pt1[1], pt1[2]);
+    glVertex3d(pt1[0], pt1[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt1[2]);
+    glVertex3d(pt1[0], pt1[1], pt1[2]);
+    glVertex3d(pt2[0], pt1[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt1[2]);
+    glEnd();
+    glBegin(GL_LINES);
+    glVertex3d(pt1[0], pt1[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt2[2]);
+    glVertex3d(pt2[0], pt2[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt1[2]);
+    glEnd();
+#endif
+    return;
+}
+
+int Window::render_grid()
+{
+    fmt::print("rendering grid.");
+
+    std::array<double, DIMMAX> pt1 = { 0 }, pt2 = { 0 };
+    const auto dim = sim_->dim;
+
+    pt1[0] = sim_->boxs->min[0];
+    pt2[0] = pt1[0] + sim_->boxs->size[0] * sim_->boxs->side[0];
+    pt1[1] = dim > 1 ? sim_->boxs->min[1] : 0;
+    pt2[1] = dim > 1 ? pt1[1] + sim_->boxs->size[1] * sim_->boxs->side[1] : 0;
+    pt1[2] = dim > 2 ? sim_->boxs->min[2] : 0;
+    pt2[2] = dim > 2 ? pt1[2] + sim_->boxs->size[2] * sim_->boxs->side[2] : 0;
+
+    const auto clr = ArrToColor(sim_->graphss->gridcolor);
+    const float size = float(sim_->graphss->gridpts);
+
+    int n = *sim_->boxs->side;
+
+    // gl2DrawGridD(pt1, pt2, sim_->boxs->side, dim);
 }
 
 } // namespace smoldyn
