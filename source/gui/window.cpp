@@ -263,9 +263,10 @@ int Window::render_scene()
             sim_->elapsedtime);
 
         // Render the scene now.
-        if (3 == dim)
+        // if (3 == dim)
             render_molecules(drawlist);
 
+#if 0
         // draw bounding box.
         if (graphss->framepts) {
             // draw bounding box
@@ -289,6 +290,7 @@ int Window::render_scene()
                     { pt1[i], pt2[i] }, { pt1[i + 1], pt2[i + 1] }, COLOR_RED);
             }
         }
+#endif
     }
 
     ImGui::End(); // End of window.
