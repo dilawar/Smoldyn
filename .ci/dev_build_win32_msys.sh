@@ -3,6 +3,8 @@
 #
 # Building on MSYS2
 #
+set -e
+set -x
 
 export MSYSTEM=MINGW64
 export PATH=/mingw64/bin:$PATH

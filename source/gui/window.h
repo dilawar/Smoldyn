@@ -138,10 +138,10 @@ private:
     bool initialized_;
     float frame_rate_;
 
-    float arena_[3];  // size of simulation space.
+    float arena_[2];  // size of simulation space.
     float canvas_[2]; // Size of canvas. Usually 2x of arena_
 
-    const float canvas_to_arena_ratio_;
+    float canvas_to_arena_ratio_;
 };
 
 }

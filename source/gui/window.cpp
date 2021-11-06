@@ -25,11 +25,12 @@ static void glfw_error_callback(int error, const char* description)
 
 Window::Window(const char* name)
     : name_(name)
-    , arena_({ 480.0f, 480.f })
     , initialized_(false)
     , frame_rate_(20.0f)
-    , canvas_to_arena_ratio_(1.5)
+    , canvas_to_arena_ratio_(1.5f)
 {
+    arena_[0] = 480.0f;
+    arena_[1] = 480.0f;
     update_canvas_size();
 }
 
@@ -241,7 +242,7 @@ int Window::render_scene()
 
     auto dim = sim_->dim;
 
-    double pt1[DIMMAX], pt2[DIMMAX];
+    float pt1[DIMMAX], pt2[DIMMAX];
     float glf1[4];
 
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -281,7 +282,7 @@ int Window::render_scene()
             // gl2DrawBoxD(pt1, pt2, dim);
             for (size_t i = 0; i < dim - 1; ++i) {
 
-                printf(" %f %f -> %f %f\n", pt1[i], pt1[i+1], pt2[i],
+                printf(" %f %f -> %f %f\n", pt1[i], pt1[i + 1], pt2[i],
                     pt2[i + 1]);
 
                 drawlist->AddLine(
