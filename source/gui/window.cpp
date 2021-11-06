@@ -143,7 +143,7 @@ int Window::simulate(simptr sim)
 
     simLog(sim, 2, "Simulating\n");
 
-    sim->clockstt = time(NULL);
+    sim_->clockstt = time(NULL);
     er = simdocommands(sim);
 
     if (!er) {
@@ -159,8 +159,10 @@ int Window::simulate(simptr sim)
         // background color = white
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1, 1, 1, 1));
 
+        size_t nFrame = 0;
         while ((er = simulatetimestep(sim)) == 0) {
-            sim->elapsedtime += difftime(time(NULL), sim->clockstt);
+            nFrame += 1;
+            sim_->elapsedtime += difftime(time(NULL), sim->clockstt);
             render_scene();
         }
     }
@@ -200,8 +202,6 @@ int Window::render_molecules(ImDrawList* drawlist)
         return 1;
     }
 
-    // draw_limits();
-
     // if (1 == sim_->graphss->graphics)
     {
         for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
@@ -219,7 +219,7 @@ int Window::render_molecules(ImDrawList* drawlist)
 
                         // printf("pos (%f,%f), clr=%d, size=%f\n", pos.x,
                         // pos.y, clr, size);
-                        drawlist->AddCircleFilled(pos, size, clr, 32.f);
+                        drawlist->AddCircleFilled(pos, size, clr, 16.f);
                     }
                 }
             }
@@ -231,14 +231,29 @@ int Window::render_molecules(ImDrawList* drawlist)
 
 int Window::render_scene()
 {
+    bool render = false;
+
     static int counter = 0;
-    counter += 1; // number of frames.
+    static int nthframe = 0;
+    counter += 1;  // number of frames.
+    nthframe += 1; // count the frames to be skipped.
 
     auto graphss = sim_->graphss;
     if (!graphss || graphss->graphics == 0) {
         fprintf(stderr, "No graphics element found: %d.\n", graphss->graphics);
         return 1;
     }
+
+    if (nthframe == graphss->graphicit) {
+        //
+        // render only every graphss->graphssit frame.
+        //
+        nthframe = 0;
+        render = true;
+    }
+
+    if (!render)
+        return -1;
 
     auto dim = sim_->dim;
 
@@ -262,11 +277,14 @@ int Window::render_scene()
         ImGui::TextColored({ 0, 0, 0, 1 }, "Frame=%d, Time=%06.2fs.", counter,
             sim_->elapsedtime);
 
+        //
         // Render the scene now.
-        // if (3 == dim)
-            render_molecules(drawlist);
+        //
 
-#if 0
+        // Render molecules.
+        render_molecules(drawlist);
+
+#if 1
         // draw bounding box.
         if (graphss->framepts) {
             // draw bounding box

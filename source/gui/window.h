@@ -67,21 +67,37 @@ public:
 
     void draw_limits(); // debug
 
+    /**
+     * Scaling function.
+     *
+     * Given arena size and dimension, compute pixel value for a given float.
+     */
     template <typename T = double, typename U = float> U scalex(const T x)
     {
         return U(arena_[0] * x / 2.0);
     }
 
-    template <typename T = double, typename U = float> U scaley(const T x)
+    template <typename T = double, typename U = float> U scaley(const T y)
     {
-        return U(arena_[1] * x / 2.0);
+        return U(arena_[1] * y / 2.0);
     }
 
     template <typename T = double, typename U = float> U scalexy(const T x)
     {
+        //
+        // Average of xscale and yscale.
+        // TODO: One can write a more efficient function.
+        //
         return (scalex<T, U>(x) + scaley<T, U>(x)) / 2.0;
     }
 
+    /**
+     * Maps bottom-left (-1,-1) - top-right (1,1) box to to (0,H), (W,0) (with
+     * y-axis positive downwards).
+     *
+     * It is tricky to get right.
+     * TODO: Have unit tests.
+     */
     template <typename T = double, typename U = float> U X(const T x)
     {
         const auto f = 1 / canvas_to_arena_ratio_;
@@ -97,6 +113,10 @@ public:
         return (f * _t) + (1 - f) * canvas_[1] / 2.0;
     }
 
+    /**
+     * Get r,g,b,a vector where r, g, b, a ∈ (0, 255) while the input vector
+     * has range of (-1, 1).
+     */
     template <typename T = double> inline ImVec4 _GetColorVec(T* const clr)
     {
         // printf(">> clr %f %f %f %f\n", clr[0], clr[1], clr[2], clr[3]);
@@ -106,11 +126,20 @@ public:
             255 * float(clr[2]), 255 * (1 - float(clr[3])) };
     }
 
+    /**
+     * Helper function to convert a 4-array to ImGui color.
+     */
     template <typename T = double> ImU32 _GetColor(T* const clr)
     {
         return ImGui::GetColorU32(_GetColorVec<T>(clr));
     }
 
+    /**
+     * Compute 2d projection.
+     *
+     * TODO: Needs a lot of work if I should support 3d views with dynamic
+     * camera position. May be Imguizmo might help a bit here.
+     */
     template <typename T = double>
     inline ImVec2 _GetPos(T* const pos, size_t dim)
     {
