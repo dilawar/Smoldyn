@@ -89,14 +89,14 @@ public:
      */
     template <typename T = double, typename U = float> U scalex(const T x)
     {
-        if (! isArenaNormalized())
+        if (!isArenaNormalized())
             return U(x);
         return U(arena_[0] * x / 2.0);
     }
 
     template <typename T = double, typename U = float> U scaley(const T y)
     {
-        if (! isArenaNormalized())
+        if (!isArenaNormalized())
             return U(y);
         return U(arena_[1] * y / 2.0f);
     }
@@ -119,8 +119,11 @@ public:
      */
     template <typename T = double, typename U = float> U X(const T x)
     {
-        if (! isArenaNormalized())
-            return U(x + canvas_[0] / 2.0f);
+        const auto xmax = ImGui::GetIO().DisplaySize.x;
+        const auto scale = scale_[0];
+
+        if (!isArenaNormalized())
+            return U(scale * x + xmax / (1 + scale));
 
         const auto f = 1.f / canvas_to_arena_ratio_;
         U _t = U((x + 1) / 2.0 * canvas_[0]);
@@ -129,8 +132,10 @@ public:
 
     template <typename T = double, typename U = float> U Y(const T y)
     {
-        if (! isArenaNormalized())
-            return U(y + canvas_[1] / 2.0);
+        const auto scale = scale_[1];
+        const auto ymax = ImGui::GetIO().DisplaySize.y;
+        if (!isArenaNormalized())
+            return U(scale * y + ymax / (1 + scale));
 
         const auto f = 1.f / canvas_to_arena_ratio_;
         U _t = U((y + 1) / 2.0 * canvas_[1]);
@@ -146,10 +151,7 @@ public:
      * If the boundary of simuilation are between -1 and 1, we call the arena
      * normalized. In this case, we need to map (-1, 1) to (H, W).
      */
-    inline bool isArenaNormalized() const
-    {
-        return false;
-    }
+    inline bool isArenaNormalized() const { return false; }
 
     /**
      * Compute 2d projection.
@@ -164,16 +166,22 @@ public:
             return ImVec2(X(pos[0]), canvas_[1] / 2.f);
         if (dim == 2)
             return ImVec2(X(pos[0]), Y(pos[1]));
-        if (dim == 3) {
-            // 3d to 2d projection.
-            auto f = 5;
-            return ImVec2(
-                X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
-        }
-#if USE_FMT
-        fmt::print(stderr, "dim={} is not supported.\n", dim);
-#endif
-        return ImVec2();
+
+        // 3d to 2d projection.
+        auto f = 5;
+        return ImVec2(
+            X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
+    }
+
+    template <typename T = double> inline ImVec2 PointOnCanvas(T x, T y, T z)
+    {
+        T pts[3] = { x, y, z };
+        return _GetPos(pts, sim_->dim);
+    }
+
+    template <typename T = double> inline ImVec2 PointOnCanvas(T* pts)
+    {
+        return _GetPos(pts, sim_->dim);
     }
 
     /**
@@ -211,8 +219,9 @@ private:
     bool initialized_;
     float frame_rate_;
 
-    std::array<float, 2> arena_;  // size of simulation space.
-    std::array<float, 2> canvas_; // Size of canvas. Usually 2x of arena_
+    std::array<float, DIMMAX> arena_;  // size of simulation space.
+    std::array<float, DIMMAX> canvas_; // Size of canvas. Usually 2x of arena_
+    std::array<float, DIMMAX> scale_;  // scale graphics.
 
     float canvas_to_arena_ratio_;
 };

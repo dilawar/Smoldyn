@@ -30,10 +30,10 @@ Window::Window(const char* name)
     : name_(name)
     , initialized_(false)
     , frame_rate_(20.0f)
+    , arena_({ 480.f, 480.f, 480.f })
+    , scale_({ 4.0f, 4.0f, 4.0f })
     , canvas_to_arena_ratio_(1.5f)
 {
-    arena_[0] = 480.0f;
-    arena_[1] = 480.0f;
     update_canvas_size();
 }
 
@@ -161,10 +161,6 @@ int Window::simulate(simptr sim)
         int tex_w, tex_h;
         io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
 
-        // background color = white
-        ImGui::PushStyleColor(
-            ImGuiCol_WindowBg, ImVec4(1.0f, 1.0f, 1.0f, 0.1f));
-
         size_t nFrame = 0;
         while ((er = simulatetimestep(sim)) == 0) {
             nFrame += 1;
@@ -218,7 +214,7 @@ int Window::render_molecules()
 
                 if (sim_->mols->display[i][ms] > 0) {
 
-                    const auto pos = _GetPos(mptr->pos, dim);
+                    const auto pos = PointOnCanvas(mptr->pos);
                     const auto size = scalexy(sim_->mols->display[i][ms]);
                     const auto clr = ArrToColor(sim_->mols->color[i][ms]);
 
@@ -228,8 +224,8 @@ int Window::render_molecules()
                         clr, size);
 #endif
 #endif
-                    drawlist->AddCircleFilled(pos, size / 2.0 /* radius */, clr,
-                        NUM_SEGMENT_IN_CIRCLE);
+                    drawlist->AddCircleFilled(
+                        pos, size /* radius */, clr, NUM_SEGMENT_IN_CIRCLE);
                 }
             }
         }
@@ -270,6 +266,12 @@ int Window::render_scene()
     auto dim = sim_->dim;
     float glf1[4];
 
+    //
+    // Set background color and text color.
+    //
+    ImGui::PushStyleColor(
+        ImGuiCol_WindowBg, ArrToColor(sim_->graphss->backcolor));
+
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -279,40 +281,36 @@ int Window::render_scene()
     ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
 
-    {
-        ImGui::TextColored({ 0.f, 0.f, 0.f, 1.f },
-            fmt::format(
-                "(dim={}) Frame={}, Time={}s.", dim, counter, sim_->elapsedtime)
-                .c_str());
+    //
+    // Drawing starts.
+    //
 
-        //
-        // Render the scene now.
-        //
+    ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
+        fmt::format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
-        // Render molecules.
-        render_molecules();
+    // Render molecules.
+    render_molecules();
 
-        //
-        // draw bounding box.
-        //
-        if (graphss->framepts) {
-            std::array<float, DIMMAX> pt1, pt2;
-            const auto wlist = sim_->wlist;
-            pt1[0] = wlist[0]->pos;
-            pt2[0] = wlist[1]->pos;
-            pt1[1] = dim > 1 ? wlist[2]->pos : 0;
-            pt2[1] = dim > 1 ? wlist[3]->pos : 0;
-            pt1[2] = dim > 2 ? wlist[4]->pos : 0;
-            pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-            draw_box_d(pt1, pt2);
-        }
-
-        if (graphss->gridpts)
-            render_grid();
+    // draw bounding box.
+    if (graphss->framepts) {
+        std::array<float, DIMMAX> pt1, pt2;
+        const auto wlist = sim_->wlist;
+        pt1[0] = wlist[0]->pos;
+        pt2[0] = wlist[1]->pos;
+        pt1[1] = dim > 1 ? wlist[2]->pos : 0;
+        pt2[1] = dim > 1 ? wlist[3]->pos : 0;
+        pt1[2] = dim > 2 ? wlist[4]->pos : 0;
+        pt2[2] = dim > 2 ? wlist[5]->pos : 0;
+        draw_box_d(pt1, pt2);
     }
 
-    ImGui::End(); // End of window.
+    // draw grid.
+    if (graphss->gridpts)
+        render_grid();
 
+    ImGui::End();
+
+    // Render now.
     ImGui::Render();
 
     //
@@ -382,8 +380,7 @@ void Window::draw_box_d(
 
 int Window::render_grid()
 {
-    fmt::print("rendering grid.");
-
+    // fmt::print("rendering grid.");
     std::array<double, DIMMAX> pt1 = { 0 }, pt2 = { 0 };
     const auto dim = sim_->dim;
 
@@ -397,9 +394,65 @@ int Window::render_grid()
     const auto clr = ArrToColor(sim_->graphss->gridcolor);
     const float size = float(sim_->graphss->gridpts);
 
-    int n = *sim_->boxs->side;
+    const auto n = sim_->boxs->side;
+    double delta1, delta2;
 
-    // gl2DrawGridD(pt1, pt2, sim_->boxs->side, dim);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    if (dim == 1) {
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        for (int i = 0; i <= n[0]; i++)
+            drawList->AddCircleFilled(
+                PointOnCanvas(pt1[0] + i * delta1, pt1[1], pt1[2]), size, clr,
+                NUM_SEGMENT_IN_CIRCLE);
+        return 0;
+    }
+
+    if (dim == 2) {
+        delta1 = (pt2[1] - pt1[1]) / n[1];
+        for (int i = 0; i <= n[1]; i++) {
+            const auto p1 = PointOnCanvas(pt1[0], pt1[1] + i * delta1, pt1[2]);
+            const auto p2 = PointOnCanvas(pt2[0], pt1[1] + i * delta1, pt1[2]);
+            drawList->AddLine(p1, p2, clr, size);
+        }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        for (int i = 0; i <= n[0]; i++) {
+            drawList->AddLine(
+                PointOnCanvas(pt1[0] + i * delta1, pt1[1], pt1[2]),
+                PointOnCanvas(pt1[0] + i * delta1, pt2[1], pt1[2]), clr, size);
+        }
+        return 0;
+    }
+
+#if 0
+    if (dim == 3) {
+        glBegin(GL_LINES);
+        delta1 = (pt2[1] - pt1[1]) / n[1];
+        delta2 = (pt2[2] - pt1[2]) / n[2];
+        for (i = 0; i <= n[1]; i++)
+            for (j = 0; j <= n[2]; j++) {
+                glVertex3d(pt1[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
+                glVertex3d(pt2[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
+            }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        delta2 = (pt2[2] - pt1[2]) / n[2];
+        for (i = 0; i <= n[0]; i++)
+            for (j = 0; j <= n[2]; j++) {
+                glVertex3d(pt1[0] + i * delta1, pt1[1], pt1[2] + j * delta2);
+                glVertex3d(pt1[0] + i * delta1, pt2[1], pt1[2] + j * delta2);
+            }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        delta2 = (pt2[1] - pt1[1]) / n[1];
+        for (i = 0; i <= n[0]; i++)
+            for (j = 0; j <= n[1]; j++) {
+                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt1[2]);
+                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt2[2]);
+            }
+        glEnd();
+    }
+#endif
+    fmt::print(stderr, "Not supported.");
+    return 1;
 }
 
 } // namespace smoldyn
