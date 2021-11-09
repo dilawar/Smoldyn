@@ -1,4 +1,5 @@
 find_package(imgui REQUIRED)
+find_package(imguizmo REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
 
@@ -15,6 +16,7 @@ add_library(gui STATIC
 
 target_include_directories(gui PUBLIC ${imgui_RES_DIRS}/bindings)
 target_link_libraries(gui PUBLIC imgui::imgui glfw::glfw GLEW::GLEW)
+target_link_libraries(gui PUBLIC imguizmo::imguizmo)
 
 if(OPTION_USE_FMT)
     target_link_libraries(gui PUBLIC fmt::fmt)

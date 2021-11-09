@@ -126,6 +126,9 @@ public:
             return U(scale * x + xmax / (1 + scale));
 
         const auto f = 1.f / canvas_to_arena_ratio_;
+        if (!isArenaNormalized())
+            return U((x / f + canvas_[0] / 2.0f) * f);
+
         U _t = U((x + 1) / 2.0 * canvas_[0]);
         return (f * _t) + (1 - f) * canvas_[0] / 2.0;
     }
@@ -138,6 +141,9 @@ public:
             return U(scale * y + ymax / (1 + scale));
 
         const auto f = 1.f / canvas_to_arena_ratio_;
+        if (!isArenaNormalized())
+            return U((y / f + canvas_[1] / 2.0f) * f);
+
         U _t = U((y + 1) / 2.0 * canvas_[1]);
         return (f * _t) + (1 - f) * canvas_[1] / 2.0;
     }
@@ -173,13 +179,13 @@ public:
             X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
     }
 
-    template <typename T = double> inline ImVec2 PointOnCanvas(T x, T y, T z)
+    template <typename T = float> inline ImVec2 PointOnCanvas(T x, T y, T z)
     {
         T pts[3] = { x, y, z };
         return _GetPos(pts, sim_->dim);
     }
 
-    template <typename T = double> inline ImVec2 PointOnCanvas(T* pts)
+    template <typename T = float> inline ImVec2 PointOnCanvas(T* pts)
     {
         return _GetPos(pts, sim_->dim);
     }

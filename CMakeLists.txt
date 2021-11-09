@@ -144,6 +144,7 @@ endif()
 if(OPTION_USE_IMGUI)
     add_definitions(-DUSE_IMGUI)
     list(APPEND CONAN_LIBS imgui/1.85 glfw/3.3.4 glew/2.2.0)
+    list(APPEND CONAN_LIBS imguizmo/1.83)
 endif()
 
 if(OPTION_USE_ZLIB)

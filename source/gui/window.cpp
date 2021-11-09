@@ -5,6 +5,7 @@
 //
 
 #include "window.h"
+#include "ImGuizmo.h"
 
 #include "../Smoldyn/smoldyn.h"
 #include "../Smoldyn/smoldynfuncs.h"
@@ -277,6 +278,10 @@ int Window::render_scene()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    ImGuizmo::SetOrthoGraphic(true);
+    ImGuizmo::BeginFrame();
+    // ImGuizmo::DrawCubes();
+
     ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
     ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
@@ -380,9 +385,8 @@ void Window::draw_box_d(
 
 int Window::render_grid()
 {
-    // fmt::print("rendering grid.");
-    std::array<double, DIMMAX> pt1 = { 0 }, pt2 = { 0 };
     const auto dim = sim_->dim;
+    std::array<float, DIMMAX> pt1 = { 0 }, pt2 = { 0 };
 
     pt1[0] = sim_->boxs->min[0];
     pt2[0] = pt1[0] + sim_->boxs->size[0] * sim_->boxs->side[0];
@@ -395,7 +399,7 @@ int Window::render_grid()
     const float size = float(sim_->graphss->gridpts);
 
     const auto n = sim_->boxs->side;
-    double delta1, delta2;
+    float delta1 = 0.0f;
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -426,30 +430,6 @@ int Window::render_grid()
 
 #if 0
     if (dim == 3) {
-        glBegin(GL_LINES);
-        delta1 = (pt2[1] - pt1[1]) / n[1];
-        delta2 = (pt2[2] - pt1[2]) / n[2];
-        for (i = 0; i <= n[1]; i++)
-            for (j = 0; j <= n[2]; j++) {
-                glVertex3d(pt1[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
-                glVertex3d(pt2[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
-            }
-        delta1 = (pt2[0] - pt1[0]) / n[0];
-        delta2 = (pt2[2] - pt1[2]) / n[2];
-        for (i = 0; i <= n[0]; i++)
-            for (j = 0; j <= n[2]; j++) {
-                glVertex3d(pt1[0] + i * delta1, pt1[1], pt1[2] + j * delta2);
-                glVertex3d(pt1[0] + i * delta1, pt2[1], pt1[2] + j * delta2);
-            }
-        delta1 = (pt2[0] - pt1[0]) / n[0];
-        delta2 = (pt2[1] - pt1[1]) / n[1];
-        for (i = 0; i <= n[0]; i++)
-            for (j = 0; j <= n[1]; j++) {
-                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt1[2]);
-                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt2[2]);
-            }
-        glEnd();
-    }
 #endif
     fmt::print(stderr, "Not supported.");
     return 1;
