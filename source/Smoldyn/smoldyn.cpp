@@ -49,7 +49,7 @@
 #include "opengl2.h"
 
 #ifdef USE_IMGUI
-#include "../gui/window.h"
+#include "../gui/window.hpp"
 #endif // USE_IMGUI
 
 /* main */

@@ -4,13 +4,13 @@
 //  Author:  Dilawar Singh <dilawar.s.rajput@gmail.com>
 //
 
-#include "window.h"
+#include "gui.hpp"
 #include "ImGuizmo.h"
 
 #include "../Smoldyn/smoldyn.h"
 #include "../Smoldyn/smoldynfuncs.h"
 
-#include <fmt/ranges.h>
+#include "window.hpp"
 
 namespace smoldyn {
 
@@ -278,12 +278,12 @@ int Window::render_scene()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGuizmo::SetOrthoGraphic(true);
+    ImGuizmo::SetOrthographic(true);
     ImGuizmo::BeginFrame();
-    // ImGuizmo::DrawCubes();
 
     ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
     ImGui::SetNextWindowPos({ 0, 0 }, 0);
+
     ImGui::Begin(name_);
 
     //
@@ -291,7 +291,7 @@ int Window::render_scene()
     //
 
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
-        fmt::format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
+        _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
     // Render molecules.
     render_molecules();
@@ -314,6 +314,11 @@ int Window::render_scene()
         render_grid();
 
     ImGui::End();
+
+    ImGuizmo::DrawCubes(camera_view_.data(), camera_proj_.data(),
+        &object_matrix_[0][0], gizmo_count_);
+
+
 
     // Render now.
     ImGui::Render();

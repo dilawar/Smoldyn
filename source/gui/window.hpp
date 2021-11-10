@@ -48,7 +48,8 @@ using namespace gl;
 #endif
 
 #include "smoldyn.h"
-#include "common.h"
+
+#include "gui.hpp"
 
 namespace smoldyn {
 
@@ -213,6 +214,42 @@ public:
 #endif
         return ImVec2();
     }
+
+protected:
+    //
+    // NOTE: extra { is required https://stackoverflow.com/a/12844625/1805129
+    //
+    std::array<std::array<float, 16>, 4> object_matrix_
+        = { { { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+                  0.f, 0.f, 1.f },
+
+            { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f,
+                0.f, 0.f, 1.f },
+
+            { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f,
+                0.f, 2.f, 1.f },
+
+            { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+                0.f, 2.f, 1.f } } };
+
+    //
+    // Identify matrix.
+    //
+    const std::array<float, 16> identify_matrix_ = { 1.f, 0.f, 0.f, 0.f, 0.f,
+        1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
+
+    //
+    // This is current camera view.
+    //
+    std::array<float, 16> camera_view_ = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f,
+        0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
+
+    //
+    // Camera projection.
+    //
+    array<float, 16> camera_proj_ = { 0.f };
+
+    int gizmo_count_ = 1;
 
 private:
     /* data */
