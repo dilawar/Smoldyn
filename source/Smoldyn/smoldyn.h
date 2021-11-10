@@ -15,7 +15,12 @@
 #include "../python/CallbackFunc.h"
 #endif
 
-#endif // -----  not __CPLUSPLSU  -----
+#endif // -----  not __CPLUSPLUS  -----
+
+//
+// A macro to mark a variable unused. Supresses compiler warnings.
+//
+#define UNUSED(x)  (void)(x)
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -72,7 +77,7 @@ enum StructCond
 #ifndef __string2_h
 #define __string2_h
 
-#define STRCHAR 256
+#define STRCHAR 512
 #define STRCHARLONG 4000
 
 #endif

@@ -30,7 +30,7 @@ if(NOT SMOLDYN_VERSION)
         else()
             # minute-ly release.
             string(TIMESTAMP STAMP "%Y%m%d%H%M")
-            set(SMOLDYN_VERSION "2.67.dev${STAMP}")
+            set(SMOLDYN_VERSION "2.68.dev${STAMP}")
         endif()
     endif()
 endif()
@@ -72,7 +72,7 @@ option(OPTION_DOCS "Generate documentation" OFF)
 # Developer options. Enables Address Sanitizer to detects memory leak etc. Most
 # memory leaks are in GL interface.
 #
-option(OPTION_STRICT_BUILD "Treat most warnings as error." OFF)
+option(OPTION_WARNING_AS_ERROR "Treat most warnings as error." OFF)
 option(OPTION_ASAN "Enable Address Sanitizer" OFF)
 
 if (OPTION_VCELL)
@@ -147,9 +147,7 @@ if(OPTION_PYTHON)
     list(APPEND CONAN_LIBS pybind11/2.7.1)
 endif(OPTION_PYTHON)
 
-#
 # Install using conan
-#
 conan_cmake_configure(REQUIRES ${CONAN_LIBS}
     GENERATORS cmake_find_package
     OPTIONS ${CONAN_OPTIONS})
@@ -196,29 +194,19 @@ if(NOT CMAKE_BUILD_TYPE)
 endif ()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-if(OPTION_STRICT_BUILD)
+if(OPTION_WARNING_AS_ERROR)
     add_definitions(-Wextra -Werror)
+    # ignore these warnings.
     CheckCompilerFlagAndAdd(-Wno-format-truncation)
     CheckCompilerFlagAndAdd(-Wno-uninitialized)
     CheckCompilerFlagAndAdd(-Wno-unused-parameter)
     CheckCompilerFlagAndAdd(-Wno-unused-but-set-parameter)
+    CheckCompilerFlagAndAdd(-Wno-attributes)
 endif()
 
-# We need a c++14 support to build python bindings.
+# We need at least c++14 support to build python bindings.
 if(OPTION_PYTHON)
     set(CMAKE_CXX_STANDARD 14)
-    try_compile(COMPILER_SUPPORT_C14
-        ${CMAKE_BINARY_DIR}/_test_compiler
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_compiler.cpp
-        OUTPUT_VARIABLE COMPILER_TEST_OUTPUT
-        )
-    if(NOT COMPILER_SUPPORT_C14)
-        message(STATUS "Failed to build test program: ${COMPILER_TEST_OUTPUT}")
-        message(FATAL_ERROR "Your compiler does not support C++14. "
-            "Please use a C++14 compliant compiler. "
-            "See https://en.cppreference.com/w/cpp/compiler_support/14 "
-            "for C++14 support among C++ compilers.")
-    endif()
 endif()
 
 ######### Core code information ###########
