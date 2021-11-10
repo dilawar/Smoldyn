@@ -12,6 +12,155 @@
 
 #include "window.hpp"
 
+bool gUseWindow = true;
+int gGizmoCount = 1;
+float gCamDistance = 8.f;
+static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
+
+//
+// NOTE: extra { is required https://stackoverflow.com/a/12844625/1805129
+//
+std::array<std::array<float, 16>, 4> gObjectMatrix
+    = { { { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+              0.f, 0.f, 1.f },
+
+        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
+            0.f, 1.f },
+
+        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
+            2.f, 1.f },
+
+        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+            2.f, 1.f } } };
+
+//
+// Identify matrix.
+//
+const std::array<float, 16> gIdentityMatrix = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f,
+    0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
+
+//
+// This is current camera view.
+//
+std::array<float, 16> gCameraView = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+    0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
+
+//
+// Camera projection.
+//
+array<float, 16> gCameraProjection = { 0.f };
+
+void EditTransform(float* cameraView, float* cameraProjection, float* matrix,
+    bool editTransformDecomposition)
+{
+    static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::LOCAL);
+    static bool useSnap = false;
+    static float snap[3] = { 1.f, 1.f, 1.f };
+    static float bounds[] = { -0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f };
+    static float boundsSnap[] = { 0.1f, 0.1f, 0.1f };
+    static bool boundSizing = false;
+    static bool boundSizingSnap = false;
+
+    if (editTransformDecomposition) {
+        if (ImGui::IsKeyPressed(90))
+            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+        if (ImGui::IsKeyPressed(69))
+            mCurrentGizmoOperation = ImGuizmo::ROTATE;
+        if (ImGui::IsKeyPressed(82)) // r Key
+            mCurrentGizmoOperation = ImGuizmo::SCALE;
+        if (ImGui::RadioButton(
+                "Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
+            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+        ImGui::SameLine();
+        if (ImGui::RadioButton(
+                "Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
+            mCurrentGizmoOperation = ImGuizmo::ROTATE;
+        ImGui::SameLine();
+        if (ImGui::RadioButton(
+                "Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
+            mCurrentGizmoOperation = ImGuizmo::SCALE;
+        float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+        ImGuizmo::DecomposeMatrixToComponents(
+            matrix, matrixTranslation, matrixRotation, matrixScale);
+        ImGui::InputFloat3("Tr", matrixTranslation);
+        ImGui::InputFloat3("Rt", matrixRotation);
+        ImGui::InputFloat3("Sc", matrixScale);
+        ImGuizmo::RecomposeMatrixFromComponents(
+            matrixTranslation, matrixRotation, matrixScale, matrix);
+
+        if (mCurrentGizmoOperation != ImGuizmo::SCALE) {
+            if (ImGui::RadioButton(
+                    "Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
+                mCurrentGizmoMode = ImGuizmo::LOCAL;
+            ImGui::SameLine();
+            if (ImGui::RadioButton(
+                    "World", mCurrentGizmoMode == ImGuizmo::WORLD))
+                mCurrentGizmoMode = ImGuizmo::WORLD;
+        }
+        if (ImGui::IsKeyPressed(83))
+            useSnap = !useSnap;
+        ImGui::Checkbox("", &useSnap);
+        ImGui::SameLine();
+
+        switch (mCurrentGizmoOperation) {
+        case ImGuizmo::TRANSLATE:
+            ImGui::InputFloat3("Snap", &snap[0]);
+            break;
+        case ImGuizmo::ROTATE:
+            ImGui::InputFloat("Angle Snap", &snap[0]);
+            break;
+        case ImGuizmo::SCALE:
+            ImGui::InputFloat("Scale Snap", &snap[0]);
+            break;
+        }
+        ImGui::Checkbox("Bound Sizing", &boundSizing);
+        if (boundSizing) {
+            ImGui::PushID(3);
+            ImGui::Checkbox("", &boundSizingSnap);
+            ImGui::SameLine();
+            ImGui::InputFloat3("Snap", boundsSnap);
+            ImGui::PopID();
+        }
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    float viewManipulateRight = io.DisplaySize.x;
+    float viewManipulateTop = 0;
+    if (gUseWindow) {
+        ImGui::SetNextWindowSize(ImVec2(800, 400));
+        ImGui::SetNextWindowPos(ImVec2(400, 20));
+        ImGui::PushStyleColor(
+            ImGuiCol_WindowBg, (ImVec4)ImColor(0.35f, 0.3f, 0.3f));
+        ImGui::Begin("Gizmo", 0, ImGuiWindowFlags_NoMove);
+        ImGuizmo::SetDrawlist();
+        float windowWidth = (float)ImGui::GetWindowWidth();
+        float windowHeight = (float)ImGui::GetWindowHeight();
+        ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y,
+            windowWidth, windowHeight);
+        viewManipulateRight = ImGui::GetWindowPos().x + windowWidth;
+        viewManipulateTop = ImGui::GetWindowPos().y;
+    } else {
+        ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+    }
+
+    ImGuizmo::DrawGrid(
+        cameraView, cameraProjection, gIdentityMatrix.data(), 100.f);
+    ImGuizmo::DrawCubes(
+        cameraView, cameraProjection, &gObjectMatrix[0][0], gGizmoCount);
+    ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation,
+        mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL,
+        boundSizing ? bounds : NULL, boundSizingSnap ? boundsSnap : NULL);
+
+    ImGuizmo::ViewManipulate(cameraView, gCamDistance,
+        ImVec2(viewManipulateRight - 128, viewManipulateTop), ImVec2(128, 128),
+        0x10101010);
+
+    if (gUseWindow) {
+        ImGui::End();
+        ImGui::PopStyleColor(1);
+    }
+}
+
 namespace smoldyn {
 
 /**
@@ -264,8 +413,12 @@ int Window::render_scene()
     if (!render)
         return -1;
 
+    int lastUsing = 0;
+    ImGuiIO& io = ImGui::GetIO();
+
     auto dim = sim_->dim;
     float glf1[4];
+    float fov = 27.f;
 
     //
     // Set background color and text color.
@@ -278,17 +431,16 @@ int Window::render_scene()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGuizmo::SetOrthographic(true);
+    Perspective(fov, io.DisplaySize.x / io.DisplaySize.y, 0.1f, 100.f,
+        gCameraProjection.data());
     ImGuizmo::BeginFrame();
-
-    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
-    ImGui::SetNextWindowPos({ 0, 0 }, 0);
-
-    ImGui::Begin(name_);
 
     //
     // Drawing starts.
     //
+    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
+    ImGui::SetNextWindowPos({ 0, 0 }, 0);
+    ImGui::Begin(name_);
 
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
@@ -313,11 +465,22 @@ int Window::render_scene()
     if (graphss->gridpts)
         render_grid();
 
-    ImGui::End();
+    if (ImGuizmo::IsUsing())
+        ImGui::Text("Using gizmo");
 
-    ImGuizmo::DrawCubes(camera_view_.data(), camera_proj_.data(),
-        &object_matrix_[0][0], gizmo_count_);
+    ImGui::Separator();
+    for (int matId = 0; matId < gGizmoCount; matId++) {
+        ImGuizmo::SetID(matId);
 
+        EditTransform(gCameraView.data(), gCameraProjection.data(),
+            gObjectMatrix[matId].data(), lastUsing == matId);
+        if (ImGuizmo::IsUsing()) {
+            lastUsing = matId;
+        }
+    }
+
+    EditTransform(gCameraView.data(), gCameraProjection.data(),
+        gObjectMatrix[0].data(), 0);
 
 
     // Render now.

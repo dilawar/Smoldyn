@@ -43,22 +43,6 @@ std::string _format(fmt::format_string<Args...> s, Args&&... args)
 
 using namespace std;
 
-static array<array<float, 16>, 4> gObjectMatrix
-    = { { { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
-              0.f, 0.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
-            0.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
-            2.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
-            2.f, 1.f } } };
-
-static const array<float, 16> gIdentityMatrix = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f,
-    0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
-
 template <typename T = float>
 void Frustum(T left, T right, T bottom, T top, T znear, T zfar, T* m16)
 {
