@@ -43,7 +43,7 @@ archives.
 Smoldyn provides a BioSimulators-compliant interface for executing Smoldyn
 simulations through SED-ML and COMBINE archives. More information about
 using Smoldyn with SED-ML and COMBINE archives is available
-[here](Using-Smoldyn-with-SED-ML-COMBINE-BioSimulators.md).
+[here](docs/user/Using-Smoldyn-with-SED-ML-COMBINE-BioSimulators.md).
 
 ## Documentation about simulation algorithms
 Information about the simulation algorithms employed by Smoldyn
