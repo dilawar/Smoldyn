@@ -4,162 +4,12 @@
 //  Author:  Dilawar Singh <dilawar.s.rajput@gmail.com>
 //
 
-#include "gui.hpp"
-#include "ImGuizmo.h"
-
 #include "../Smoldyn/smoldyn.h"
 #include "../Smoldyn/smoldynfuncs.h"
 
+#include "helper.hpp"
+#include "graphics.h"
 #include "window.hpp"
-
-bool gUseWindow = true;
-int gGizmoCount = 1;
-float gCamDistance = 8.f;
-static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
-
-//
-// NOTE: extra { is required https://stackoverflow.com/a/12844625/1805129
-//
-std::array<std::array<float, 16>, 4> gObjectMatrix
-    = { { { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
-              0.f, 0.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
-            0.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 2.f, 0.f,
-            2.f, 1.f },
-
-        { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
-            2.f, 1.f } } };
-
-//
-// Identify matrix.
-//
-const std::array<float, 16> gIdentityMatrix = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f,
-    0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
-
-//
-// This is current camera view.
-//
-std::array<float, 16> gCameraView = { 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
-    0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
-
-//
-// Camera projection.
-//
-array<float, 16> gCameraProjection = { 0.f };
-
-void EditTransform(float* cameraView, float* cameraProjection, float* matrix,
-    bool editTransformDecomposition)
-{
-    static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::LOCAL);
-    static bool useSnap = false;
-    static float snap[3] = { 1.f, 1.f, 1.f };
-    static float bounds[] = { -0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f };
-    static float boundsSnap[] = { 0.1f, 0.1f, 0.1f };
-    static bool boundSizing = false;
-    static bool boundSizingSnap = false;
-
-    if (editTransformDecomposition) {
-        if (ImGui::IsKeyPressed(90))
-            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-        if (ImGui::IsKeyPressed(69))
-            mCurrentGizmoOperation = ImGuizmo::ROTATE;
-        if (ImGui::IsKeyPressed(82)) // r Key
-            mCurrentGizmoOperation = ImGuizmo::SCALE;
-        if (ImGui::RadioButton(
-                "Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
-            mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-        ImGui::SameLine();
-        if (ImGui::RadioButton(
-                "Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
-            mCurrentGizmoOperation = ImGuizmo::ROTATE;
-        ImGui::SameLine();
-        if (ImGui::RadioButton(
-                "Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
-            mCurrentGizmoOperation = ImGuizmo::SCALE;
-        float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-        ImGuizmo::DecomposeMatrixToComponents(
-            matrix, matrixTranslation, matrixRotation, matrixScale);
-        ImGui::InputFloat3("Tr", matrixTranslation);
-        ImGui::InputFloat3("Rt", matrixRotation);
-        ImGui::InputFloat3("Sc", matrixScale);
-        ImGuizmo::RecomposeMatrixFromComponents(
-            matrixTranslation, matrixRotation, matrixScale, matrix);
-
-        if (mCurrentGizmoOperation != ImGuizmo::SCALE) {
-            if (ImGui::RadioButton(
-                    "Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
-                mCurrentGizmoMode = ImGuizmo::LOCAL;
-            ImGui::SameLine();
-            if (ImGui::RadioButton(
-                    "World", mCurrentGizmoMode == ImGuizmo::WORLD))
-                mCurrentGizmoMode = ImGuizmo::WORLD;
-        }
-        if (ImGui::IsKeyPressed(83))
-            useSnap = !useSnap;
-        ImGui::Checkbox("", &useSnap);
-        ImGui::SameLine();
-
-        switch (mCurrentGizmoOperation) {
-        case ImGuizmo::TRANSLATE:
-            ImGui::InputFloat3("Snap", &snap[0]);
-            break;
-        case ImGuizmo::ROTATE:
-            ImGui::InputFloat("Angle Snap", &snap[0]);
-            break;
-        case ImGuizmo::SCALE:
-            ImGui::InputFloat("Scale Snap", &snap[0]);
-            break;
-        }
-        ImGui::Checkbox("Bound Sizing", &boundSizing);
-        if (boundSizing) {
-            ImGui::PushID(3);
-            ImGui::Checkbox("", &boundSizingSnap);
-            ImGui::SameLine();
-            ImGui::InputFloat3("Snap", boundsSnap);
-            ImGui::PopID();
-        }
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    float viewManipulateRight = io.DisplaySize.x;
-    float viewManipulateTop = 0;
-    if (gUseWindow) {
-        ImGui::SetNextWindowSize(ImVec2(800, 400));
-        ImGui::SetNextWindowPos(ImVec2(400, 20));
-        ImGui::PushStyleColor(
-            ImGuiCol_WindowBg, (ImVec4)ImColor(0.35f, 0.3f, 0.3f));
-        ImGui::Begin("Gizmo", 0, ImGuiWindowFlags_NoMove);
-        ImGuizmo::SetDrawlist();
-        float windowWidth = (float)ImGui::GetWindowWidth();
-        float windowHeight = (float)ImGui::GetWindowHeight();
-        ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y,
-            windowWidth, windowHeight);
-        viewManipulateRight = ImGui::GetWindowPos().x + windowWidth;
-        viewManipulateTop = ImGui::GetWindowPos().y;
-    } else {
-        ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-    }
-
-    ImGuizmo::DrawGrid(
-        cameraView, cameraProjection, gIdentityMatrix.data(), 100.f);
-    ImGuizmo::DrawCubes(
-        cameraView, cameraProjection, &gObjectMatrix[0][0], gGizmoCount);
-    ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation,
-        mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL,
-        boundSizing ? bounds : NULL, boundSizingSnap ? boundsSnap : NULL);
-
-    ImGuizmo::ViewManipulate(cameraView, gCamDistance,
-        ImVec2(viewManipulateRight - 128, viewManipulateTop), ImVec2(128, 128),
-        0x10101010);
-
-    if (gUseWindow) {
-        ImGui::End();
-        ImGui::PopStyleColor(1);
-    }
-}
 
 namespace smoldyn {
 
@@ -321,30 +171,6 @@ int Window::simulate(simptr sim)
     return er;
 }
 
-void Window::draw_limits()
-{
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-    float pos[2] = { 0, 0 };
-    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_BLACK, 16.f);
-
-    pos[0] = -0.5;
-    pos[1] = -0.5;
-    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
-
-    pos[0] = 0.5;
-    pos[1] = -0.5;
-    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
-
-    pos[0] = 0.5;
-    pos[1] = 0.5;
-    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
-
-    pos[0] = -0.5;
-    pos[1] = 0.5;
-    draw_list->AddCircleFilled(_GetPos(pos, 2), 10.f, COLOR_RED, 16.f);
-}
-
 int Window::render_molecules()
 {
     auto dim = sim_->dim;
@@ -418,7 +244,6 @@ int Window::render_scene()
 
     auto dim = sim_->dim;
     float glf1[4];
-    float fov = 27.f;
 
     //
     // Set background color and text color.
@@ -434,13 +259,31 @@ int Window::render_scene()
     //
     // Drawing starts.
     //
-    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
-    ImGui::SetNextWindowPos({ 0, 0 }, 0);
+    // ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
+    // ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
-
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
+    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth
+    // buffer.
+    GLuint FramebufferName = 0;
+    glGenFramebuffers(1, &FramebufferName);
+    glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+
+    GLuint renderedTexture = 0;
+    glGenTextures(1, &renderedTexture);
+
+    // "Bind" the newly created texture : all future texture functions will
+    // modify this texture
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+    gui::RenderSim(sim_.get(), fbo_);
+    ImGui::Image((void*)(intptr_t)tex, ImVec2(512, 512));
+
+    ImGui::End();
+
+#if 0
     // Render molecules.
     render_molecules();
 
@@ -462,6 +305,7 @@ int Window::render_scene()
         render_grid();
 
     ImGui::Separator();
+#endif
 
     // Render now.
     ImGui::Render();
@@ -480,107 +324,6 @@ int Window::render_scene()
     glfwSwapBuffers(window_);
 
     return 0;
-}
-
-void Window::draw_box_d(
-    const std::array<float, DIMMAX>& pt1, const std::array<float, DIMMAX>& pt2)
-{
-    const auto dim = sim_->dim;
-    const auto clr = ArrToColor(sim_->graphss->framecolor);
-    const auto width = float(sim_->graphss->framepts);
-
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-
-    if (dim == 1) {
-        ImVec2 p1 { pt1[0], pt1[1] };
-        ImVec2 p2 { pt2[0], pt1[1] };
-        drawList->AddLine(p1, p2, clr, width);
-        return;
-    }
-
-    if (dim == 2) {
-        auto v1 = toImVec2(pt1.data(), dim);
-        auto v2 = toImVec2(pt2.data(), dim);
-        drawList->AddRect(v1, v2, clr, width);
-        return;
-    }
-
-    fmt::print(stderr, "Not implemented yet.");
-
-#if 0
-    glVertex3d(pt1[0], pt1[1], pt1[2]);
-    glVertex3d(pt1[0], pt1[1], pt2[2]);
-    glVertex3d(pt1[0], pt2[1], pt2[2]);
-    glVertex3d(pt1[0], pt2[1], pt1[2]);
-    glVertex3d(pt1[0], pt1[1], pt1[2]);
-    glVertex3d(pt2[0], pt1[1], pt1[2]);
-    glVertex3d(pt2[0], pt2[1], pt1[2]);
-    glVertex3d(pt2[0], pt2[1], pt2[2]);
-    glVertex3d(pt2[0], pt1[1], pt2[2]);
-    glVertex3d(pt2[0], pt1[1], pt1[2]);
-    glEnd();
-    glBegin(GL_LINES);
-    glVertex3d(pt1[0], pt1[1], pt2[2]);
-    glVertex3d(pt2[0], pt1[1], pt2[2]);
-    glVertex3d(pt1[0], pt2[1], pt2[2]);
-    glVertex3d(pt2[0], pt2[1], pt2[2]);
-    glVertex3d(pt1[0], pt2[1], pt1[2]);
-    glVertex3d(pt2[0], pt2[1], pt1[2]);
-    glEnd();
-#endif
-    return;
-}
-
-int Window::render_grid()
-{
-    const auto dim = sim_->dim;
-    std::array<float, DIMMAX> pt1 = { 0 }, pt2 = { 0 };
-
-    pt1[0] = sim_->boxs->min[0];
-    pt2[0] = pt1[0] + sim_->boxs->size[0] * sim_->boxs->side[0];
-    pt1[1] = dim > 1 ? sim_->boxs->min[1] : 0;
-    pt2[1] = dim > 1 ? pt1[1] + sim_->boxs->size[1] * sim_->boxs->side[1] : 0;
-    pt1[2] = dim > 2 ? sim_->boxs->min[2] : 0;
-    pt2[2] = dim > 2 ? pt1[2] + sim_->boxs->size[2] * sim_->boxs->side[2] : 0;
-
-    const auto clr = ArrToColor(sim_->graphss->gridcolor);
-    const float size = float(sim_->graphss->gridpts);
-
-    const auto n = sim_->boxs->side;
-    float delta1 = 0.0f;
-
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-
-    if (dim == 1) {
-        delta1 = (pt2[0] - pt1[0]) / n[0];
-        for (int i = 0; i <= n[0]; i++)
-            drawList->AddCircleFilled(
-                PointOnCanvas(pt1[0] + i * delta1, pt1[1], pt1[2]), size, clr,
-                NUM_SEGMENT_IN_CIRCLE);
-        return 0;
-    }
-
-    if (dim == 2) {
-        delta1 = (pt2[1] - pt1[1]) / n[1];
-        for (int i = 0; i <= n[1]; i++) {
-            const auto p1 = PointOnCanvas(pt1[0], pt1[1] + i * delta1, pt1[2]);
-            const auto p2 = PointOnCanvas(pt2[0], pt1[1] + i * delta1, pt1[2]);
-            drawList->AddLine(p1, p2, clr, size);
-        }
-        delta1 = (pt2[0] - pt1[0]) / n[0];
-        for (int i = 0; i <= n[0]; i++) {
-            drawList->AddLine(
-                PointOnCanvas(pt1[0] + i * delta1, pt1[1], pt1[2]),
-                PointOnCanvas(pt1[0] + i * delta1, pt2[1], pt1[2]), clr, size);
-        }
-        return 0;
-    }
-
-#if 0
-    if (dim == 3) {
-#endif
-    fmt::print(stderr, "Not supported.");
-    return 1;
 }
 
 } // namespace smoldyn

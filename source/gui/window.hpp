@@ -49,8 +49,6 @@ using namespace gl;
 
 #include "smoldyn.h"
 
-#include "gui.hpp"
-
 namespace smoldyn {
 
 class Window {
@@ -230,6 +228,8 @@ private:
     std::array<float, DIMMAX> scale_;  // scale graphics.
 
     float canvas_to_arena_ratio_;
+
+    unsigned int fbo_;
 };
 
 }

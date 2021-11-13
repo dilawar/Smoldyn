@@ -9,7 +9,7 @@ endif()
 
 add_library(gui STATIC
     window.cpp
-    # graphics.cpp
+    graphics.cpp
     ${imgui_RES_DIRS}/bindings/imgui_impl_glfw.cpp
     ${imgui_RES_DIRS}/bindings/imgui_impl_opengl3.cpp
     )
