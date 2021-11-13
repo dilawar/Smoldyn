@@ -431,10 +431,6 @@ int Window::render_scene()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    Perspective(fov, io.DisplaySize.x / io.DisplaySize.y, 0.1f, 100.f,
-        gCameraProjection.data());
-    ImGuizmo::BeginFrame();
-
     //
     // Drawing starts.
     //
@@ -465,23 +461,7 @@ int Window::render_scene()
     if (graphss->gridpts)
         render_grid();
 
-    if (ImGuizmo::IsUsing())
-        ImGui::Text("Using gizmo");
-
     ImGui::Separator();
-    for (int matId = 0; matId < gGizmoCount; matId++) {
-        ImGuizmo::SetID(matId);
-
-        EditTransform(gCameraView.data(), gCameraProjection.data(),
-            gObjectMatrix[matId].data(), lastUsing == matId);
-        if (ImGuizmo::IsUsing()) {
-            lastUsing = matId;
-        }
-    }
-
-    EditTransform(gCameraView.data(), gCameraProjection.data(),
-        gObjectMatrix[0].data(), 0);
-
 
     // Render now.
     ImGui::Render();
