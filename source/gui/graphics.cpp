@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <string>
 
+#include <fmt/core.h>
+
 using namespace std;
 
 #include "../libSteve/SimCommand.h"
@@ -28,7 +30,27 @@ constexpr double PI = 3.14159265358979323846;
 
 namespace gui {
 
-void draw_sphere(double r, int lats, int longs)
+int Dimension = 1;
+
+float ClipSize = 0.f;
+float ClipMidx = 0.f, ClipMidy = 0.f, ClipMidz = 0.f;
+
+float ClipLeft = 0.f, ClipRight = 0.f;
+float ClipBot = 0.f, ClipTop = 0.f;
+float ClipFront = 0.f, ClipBack = 0.f;
+float FieldOfView = 45.f;
+float Aspect = 1.0;
+
+float PixWide = 0.f, PixHigh = 0.f;
+
+int Fix2DAspect = 0;
+
+int Zoom = 0;
+int Xtrans = 0, Ytrans = 0;
+int Near = 0;
+int Gl2PauseState = 0;
+
+void DrawSphere(double r, int lats, int longs)
 {
     int i, j;
     for (i = 0; i <= lats; i++) {
@@ -342,6 +364,7 @@ void RenderSurfaces(simptr sim)
                             (GLdouble)zmid);
                     }
                     for (p = 0; p < srf->npanel[5]; p++) { // 2-D disks back
+                        point = srf->panels[5][p]->point;
                         point = srf->panels[5][p]->point;
                         front = srf->panels[5][p]->front;
                         glVertex3d(
@@ -736,7 +759,7 @@ void RenderMolecs(simptr sim)
                             glTranslated((GLdouble)(mptr->pos[0]),
                                 (GLdouble)(mptr->pos[1]),
                                 (GLdouble)(mptr->pos[2]));
-                        draw_sphere((GLdouble)(mols->display[i][ms]), 15, 15);
+                        DrawSphere((GLdouble)(mols->display[i][ms]), 15, 15);
                         glPopMatrix();
                     }
                 }
@@ -807,7 +830,6 @@ void RenderLattice(simptr sim)
     return;
 }
 
-/* RenderText */
 /* RenderSim */
 void RenderSim(simptr sim, void* data)
 {
@@ -816,6 +838,10 @@ void RenderSim(simptr sim, void* data)
     int dim;
     wallptr* wlist;
     GLfloat glf1[4];
+
+    graphicsupdate(sim);
+
+    Initialize(sim);
 
     graphss = sim->graphss;
     if (!graphss || graphss->graphics == 0)
@@ -868,11 +894,138 @@ void RenderSim(simptr sim, void* data)
     if (sim->latticess)
         RenderLattice(sim);
 
-#if 0
-    if (graphss->ntextitems)
-        RenderText(sim);
-#endif
-
     return;
 }
+
+void GL2_Initialize(
+    float xlo, float xhi, float ylo, float yhi, float zlo, float zhi)
+{
+
+    if (ylo == yhi && zlo == zhi)
+        Dimension = 1;
+    else if (zlo == zhi)
+        Dimension = 2;
+    else
+        Dimension = 3;
+    ClipSize = 1.05
+        * sqrt((xhi - xlo) * (xhi - xlo) + (yhi - ylo) * (yhi - ylo)
+            + (zhi - zlo) * (zhi - zlo));
+    if (ClipSize == 0)
+        ClipSize = 1.0;
+    ClipMidx = (xhi - xlo) / 2.0 + xlo;
+    ClipMidy = (yhi - ylo) / 2.0 + ylo;
+    ClipMidz = (zhi - zlo) / 2.0 + zlo;
+    ClipLeft = ClipMidx - ClipSize / 2.0;
+    ClipRight = ClipMidx + ClipSize / 2.0;
+    ClipBot = ClipMidy - ClipSize / 2.0;
+    ClipTop = ClipMidy + ClipSize / 2.0;
+    ClipBack = ClipMidz - ClipSize / 2.0;
+    ClipFront = ClipMidz + ClipSize / 2.0;
+
+    if (Dimension == 2 && !Fix2DAspect) {
+        ClipLeft = xlo;
+        ClipRight = xhi;
+        ClipBot = ylo;
+        ClipTop = yhi;
+    }
+
+    FieldOfView = 45;
+    Zoom = 1;
+    Xtrans = Ytrans = 0;
+    Near = -ClipSize / 2.0;
+    Aspect = 1.0;
+    Gl2PauseState = 0;
+
+    fmt::print("ClipMidx={}, ClipMidy={}, ClipMidz={}, Near={}\n", ClipMidx,
+        ClipMidy, ClipMidz, Near);
+
+    glClearColor(1, 1, 1, 1);
+    glColor3f(0, 0, 0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glTranslatef(-ClipMidx, -ClipMidy, -ClipMidz);
+
+    if (Dimension == 3) {
+        glEnable(GL_DEPTH_TEST);
+    }
+    return;
+}
+
+/* ChangeSize */
+void ChangeSize(int w, int h)
+{
+    GLfloat clipheight, clipwidth;
+    GLfloat nearold, m[16];
+
+    PixWide = w;
+    PixHigh = h;
+    if (h == 0)
+        h = 1;
+
+    glViewport(0, 0, w, h);
+
+    if (Dimension < 3 && Fix2DAspect) {
+        if (w <= h) {
+            clipheight = ClipSize / Zoom * h / w;
+            clipwidth = ClipSize / Zoom;
+        } else {
+            clipheight = ClipSize / Zoom;
+            clipwidth = ClipSize / Zoom * w / h;
+        }
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(ClipLeft, ClipLeft + clipwidth, ClipBot, ClipBot + clipheight,
+            ClipFront, ClipBack);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    } else if (Dimension < 3) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(ClipLeft, ClipRight, ClipBot, ClipTop, ClipFront, ClipBack);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    } else {
+        Aspect = 1.0 * w / h;
+        nearold = Near;
+        if (w >= h)
+            Near = ClipSize / 2.0 / tan(FieldOfView * PI / 180.0 / 2.0);
+        else
+            Near
+                = ClipSize / 2.0 / tan(FieldOfView * Aspect * PI / 180.0 / 2.0);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(FieldOfView, Aspect, Near, ClipSize + Near);
+        glMatrixMode(GL_MODELVIEW);
+        glGetFloatv(GL_MODELVIEW_MATRIX, m);
+        glLoadIdentity();
+        glTranslatef(0, 0, nearold - Near);
+        glMultMatrixf(m);
+    }
+    return;
+}
+
+void Initialize(simptr sim)
+{
+    ChangeSize(640, 640);
+
+    const auto dim = sim->dim;
+    const auto wlist = sim->wlist;
+    if (dim == 1)
+        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos, 0, 0, 0, 0);
+    else if (dim == 2)
+        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
+            (float)wlist[2]->pos, (float)wlist[3]->pos, 0, 0);
+    else {
+        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
+            (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
+            (float)wlist[5]->pos);
+        if (sim->srfss) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        }
+    }
+}
+
 } // namespace gui

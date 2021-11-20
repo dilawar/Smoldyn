@@ -18,14 +18,18 @@ namespace gui {
 // core simulation functions
 void RenderSurfaces(simptr sim);
 void RenderMolecs(simptr sim);
-void RenderText(simptr sim);
 void RenderSim(simptr sim, void* data);
+
+void Initialize(simptr sim);
+
+void GL2_Initialize(
+    float xlo, float xhi, float ylo, float yhi, float zlo, float zhi);
 
 /**
  * Credit: https://stackoverflow.com/a/7687413/1805129
  * TODO: Test it.
  */
-void draw_sphere(double r, int lats, int longs);
+void DrawSphere(double r, int lats, int longs);
 
 template <typename T = float>
 inline T* ConvertDoubleTo(double* const vals, T* output, const size_t N)

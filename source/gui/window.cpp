@@ -259,16 +259,13 @@ int Window::render_scene()
     //
     // Drawing starts.
     //
-    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
-    ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
+    ImGui::End();
 
     // Render the simulation.
     gui::RenderSim(sim_.get(), nullptr);
-
-    ImGui::End();
 
     // Render now.
     ImGui::Render();
@@ -278,7 +275,7 @@ int Window::render_scene()
     //
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
+    glViewport(10, 10, display_w - 10, display_h - 10);
 
     // glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -288,4 +285,3 @@ int Window::render_scene()
 }
 
 } // namespace smoldyn
-
