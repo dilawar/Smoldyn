@@ -809,7 +809,7 @@ void RenderLattice(simptr sim)
 
 /* RenderText */
 /* RenderSim */
-void RenderSim(simptr sim, unsigned int& fbo)
+void RenderSim(simptr sim, void* data)
 {
     graphicsssptr graphss;
     double pt1[DIMMAX], pt2[DIMMAX];

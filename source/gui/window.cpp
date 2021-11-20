@@ -131,8 +131,8 @@ int Window::init()
         |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 
     // Setup Dear ImGui style
-    // ImGui::StyleColorsDark();
-    ImGui::StyleColorsClassic();
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsClassic();
 
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -243,13 +243,15 @@ int Window::render_scene()
     auto dim = sim_->dim;
     float glf1[4];
 
+    // Poll events.
+    glfwPollEvents();
+
     //
     // Set background color and text color.
     //
     ImGui::PushStyleColor(
         ImGuiCol_WindowBg, ArrToColor(sim_->graphss->backcolor));
 
-    glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -263,46 +265,10 @@ int Window::render_scene()
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
-    int width, height;
-    glfwGetFramebufferSize(window_, &width, &height);
-    GLsizei nrChannels = 3;
-    GLsizei stride = nrChannels * width;
-    stride += (stride % 4) ? (4 - stride % 4) : 0;
-    GLsizei bufferSize = stride * height;
-    std::vector<char> buffer(bufferSize);
-    glPixelStorei(GL_PACK_ALIGNMENT, 4);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
-    // stbi_flip_vertically_on_write(true);
-
-    fprintf(stderr, "Widhth=%d, height=%d size=%ld.\n", width, height,
-        buffer.size());
+    // Render the simulation.
+    gui::RenderSim(sim_.get(), nullptr);
 
     ImGui::End();
-
-#if 0
-    // Render molecules.
-    render_molecules();
-
-    // draw bounding box.
-    if (graphss->framepts) {
-        std::array<float, DIMMAX> pt1, pt2;
-        const auto wlist = sim_->wlist;
-        pt1[0] = wlist[0]->pos;
-        pt2[0] = wlist[1]->pos;
-        pt1[1] = dim > 1 ? wlist[2]->pos : 0;
-        pt2[1] = dim > 1 ? wlist[3]->pos : 0;
-        pt1[2] = dim > 2 ? wlist[4]->pos : 0;
-        pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-        draw_box_d(pt1, pt2);
-    }
-
-    // draw grid.
-    if (graphss->gridpts)
-        render_grid();
-
-    ImGui::Separator();
-#endif
 
     // Render now.
     ImGui::Render();
@@ -310,13 +276,11 @@ int Window::render_scene()
     //
     // Clean the window.
     //
-    static ImVec4 resetclr = ImVec4(1.f, 1.f, 1.f, 1.00f);
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(resetclr.x * resetclr.w, resetclr.y * resetclr.w,
-        resetclr.z * resetclr.w, resetclr.w);
-    glClear(GL_COLOR_BUFFER_BIT);
+
+    // glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 

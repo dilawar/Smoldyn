@@ -19,7 +19,7 @@ namespace gui {
 void RenderSurfaces(simptr sim);
 void RenderMolecs(simptr sim);
 void RenderText(simptr sim);
-void RenderSim(simptr sim, unsigned int& fbo);
+void RenderSim(simptr sim, void* data);
 
 /**
  * Credit: https://stackoverflow.com/a/7687413/1805129
