@@ -11,6 +11,8 @@
 #include "graphics.h"
 #include "window.hpp"
 
+#include <vector>
+
 namespace smoldyn {
 
 /**
@@ -221,10 +223,6 @@ int Window::render_scene()
 
     auto graphss = sim_->graphss;
     if (!graphss || graphss->graphics == 0) {
-#if USE_FMT
-        fmt::print(
-            stderr, "No graphics element found: {}.\n", graphss->graphics);
-#endif
         return 1;
     }
 
@@ -259,27 +257,26 @@ int Window::render_scene()
     //
     // Drawing starts.
     //
-    // ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
-    // ImGui::SetNextWindowPos({ 0, 0 }, 0);
+    ImGui::SetNextWindowSize({ canvas_[0], canvas_[1] });
+    ImGui::SetNextWindowPos({ 0, 0 }, 0);
     ImGui::Begin(name_);
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
-    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth
-    // buffer.
-    GLuint FramebufferName = 0;
-    glGenFramebuffers(1, &FramebufferName);
-    glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+    int width, height;
+    glfwGetFramebufferSize(window_, &width, &height);
+    GLsizei nrChannels = 3;
+    GLsizei stride = nrChannels * width;
+    stride += (stride % 4) ? (4 - stride % 4) : 0;
+    GLsizei bufferSize = stride * height;
+    std::vector<char> buffer(bufferSize);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+    glReadBuffer(GL_FRONT);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
+    // stbi_flip_vertically_on_write(true);
 
-    GLuint renderedTexture = 0;
-    glGenTextures(1, &renderedTexture);
-
-    // "Bind" the newly created texture : all future texture functions will
-    // modify this texture
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
-
-    gui::RenderSim(sim_.get(), fbo_);
-    ImGui::Image((void*)(intptr_t)tex, ImVec2(512, 512));
+    fprintf(stderr, "Widhth=%d, height=%d size=%ld.\n", width, height,
+        buffer.size());
 
     ImGui::End();
 
