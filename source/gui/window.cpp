@@ -219,12 +219,6 @@ int Window::renderScene()
     // Poll events.
     glfwPollEvents();
 
-    //
-    // Set background color and text color.
-    //
-    auto clr = gui::gGraphicsParam_.BgColor;
-    // ImGui::PushStyleColor(0, ArrToColorVec(clr.data()));
-
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -240,7 +234,10 @@ int Window::renderScene()
     ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, -180.f, 180.f);
 
     ImGui::Separator();
-    ImGui::ColorPicker4("Background Color", sim_->graphss->backcolor);
+    ImGui::ColorEdit4("Bg Color", sim_->graphss->backcolor);
+    ImGui::ColorEdit4("Frame Color", sim_->graphss->framecolor);
+    ImGui::ColorEdit4("Grid Color", sim_->graphss->gridcolor);
+    ImGui::ColorEdit4("Text Color", sim_->graphss->textcolor);
 
     ImGui::Separator();
     ImGui::LabelText("ClipSize", "%f", gui::gGraphicsParam_.ClipSize);
