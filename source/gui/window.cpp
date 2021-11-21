@@ -249,7 +249,8 @@ int Window::renderScene()
     if (ImGui::Button("Snapshot")) {
         writeTIFF(snapshotName_, "OpenGL picture", -1);
         numSnapshots_ += 1;
-        strcpy(snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
+        strcpy(
+            snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
     }
     ImGui::Separator();
 
@@ -336,17 +337,13 @@ int Window::writeTIFF(
     TIFF* file;
     GLubyte *image, *p;
 
-
     GLint viewport[4] = { 0 };
     glGetIntegerv(GL_VIEWPORT, viewport);
 
-    auto width = viewport[2];
-    auto height = viewport[3];
     auto x = viewport[0];
     auto y = viewport[1];
-
-    fmt::print(stdout, "w={} h={} viewport={}\n", width, height, viewport);
-    fflush(stdout);
+    auto width = viewport[2];
+    auto height = viewport[3];
 
     if (compression == -1)
         compression = COMPRESSION_PACKBITS;
