@@ -68,82 +68,12 @@ public:
     int init();
     int clear();
 
-    void set_arena(float width, float height);
-    void update_canvas_size();
+    static size_t getWidth() ;
+    static size_t getHeight() ;
 
     void draw_limits(); // debug
 
-    /**
-     * Draw a box.
-     */
-    void draw_box_d(const std::array<float, DIMMAX>& pt1,
-        const std::array<float, DIMMAX>& pt2);
-
-    /**
-     * Scaling function.
-     *
-     * Given arena size and dimension, compute pixel value for a given float.
-     */
-    template <typename T = double, typename U = float> U scalex(const T x)
-    {
-        if (!isArenaNormalized())
-            return U(x);
-        return U(arena_[0] * x / 2.0);
-    }
-
-    template <typename T = double, typename U = float> U scaley(const T y)
-    {
-        if (!isArenaNormalized())
-            return U(y);
-        return U(arena_[1] * y / 2.0f);
-    }
-
-    template <typename T = double, typename U = float> U scalexy(const T x)
-    {
-        //
-        // Average of xscale and yscale.
-        // TODO: One can write a more efficient function.
-        //
-        return (scalex<T, U>(x) + scaley<T, U>(x)) / 2.0;
-    }
-
-    /**
-     * Maps bottom-left (-1,-1) - top-right (1,1) box to to (0,H), (W,0) (with
-     * y-axis positive downwards).
-     *
-     * It is tricky to get right.
-     * TODO: Have unit tests.
-     */
-    template <typename T = double, typename U = float> U X(const T x)
-    {
-        const auto xmax = ImGui::GetIO().DisplaySize.x;
-        const auto scale = scale_[0];
-
-        if (!isArenaNormalized())
-            return U(scale * x + xmax / (1 + scale));
-
-        const auto f = 1.f / canvas_to_arena_ratio_;
-        if (!isArenaNormalized())
-            return U((x / f + canvas_[0] / 2.0f) * f);
-
-        U _t = U((x + 1) / 2.0 * canvas_[0]);
-        return (f * _t) + (1 - f) * canvas_[0] / 2.0;
-    }
-
-    template <typename T = double, typename U = float> U Y(const T y)
-    {
-        const auto scale = scale_[1];
-        const auto ymax = ImGui::GetIO().DisplaySize.y;
-        if (!isArenaNormalized())
-            return U(scale * y + ymax / (1 + scale));
-
-        const auto f = 1.f / canvas_to_arena_ratio_;
-        if (!isArenaNormalized())
-            return U((y / f + canvas_[1] / 2.0f) * f);
-
-        U _t = U((y + 1) / 2.0 * canvas_[1]);
-        return (f * _t) + (1 - f) * canvas_[1] / 2.0;
-    }
+    void updateCanvasSize();
 
     /**
      * Get the graphics type. Scaling functions uses this information.
@@ -156,36 +86,6 @@ public:
      */
     inline bool isArenaNormalized() const { return false; }
 
-    /**
-     * Compute 2d projection.
-     *
-     * TODO: Needs a lot of work if I should support 3d views with dynamic
-     * camera position. May be Imguizmo might help a bit here.
-     */
-    template <typename T = double>
-    inline ImVec2 _GetPos(T* const pos, size_t dim)
-    {
-        if (dim == 1)
-            return ImVec2(X(pos[0]), canvas_[1] / 2.f);
-        if (dim == 2)
-            return ImVec2(X(pos[0]), Y(pos[1]));
-
-        // 3d to 2d projection.
-        auto f = 5;
-        return ImVec2(
-            X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
-    }
-
-    template <typename T = float> inline ImVec2 PointOnCanvas(T x, T y, T z)
-    {
-        T pts[3] = { x, y, z };
-        return _GetPos(pts, sim_->dim);
-    }
-
-    template <typename T = float> inline ImVec2 PointOnCanvas(T* pts)
-    {
-        return _GetPos(pts, sim_->dim);
-    }
 
     /**
      * Convert a double* to ImVec2
@@ -221,11 +121,7 @@ private:
     bool initialized_;
     float frame_rate_;
 
-    std::array<float, DIMMAX> arena_;  // size of simulation space.
     std::array<float, DIMMAX> canvas_; // Size of canvas. Usually 2x of arena_
-    std::array<float, DIMMAX> scale_;  // scale graphics.
-
-    float canvas_to_arena_ratio_;
 
     unsigned int fbo_;
 };

@@ -90,10 +90,9 @@ struct GraphicsParam {
 
     void setViewPort()
     {
-        const auto size = ImGui::GetWindowSize();
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        glViewport(0, 0, size.y, size.x);
+        glViewport(10, 10, CanvasWidth, CanvasHeight);
     }
 
     void print() { fmt::print("Zoom={} Dim={}", Zoom, Dimension); }

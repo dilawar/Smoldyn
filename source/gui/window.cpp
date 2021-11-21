@@ -32,11 +32,8 @@ Window::Window(const char* name)
     : name_(name)
     , initialized_(false)
     , frame_rate_(20.0f)
-    , arena_({ 480.f, 480.f, 480.f })
-    , scale_({ 4.0f, 4.0f, 4.0f })
-    , canvas_to_arena_ratio_(1.5f)
+    , canvas_({ 720.f, 480.f, 480.f })
 {
-    update_canvas_size();
 }
 
 Window::~Window()
@@ -49,19 +46,6 @@ Window::~Window()
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
-}
-
-void Window::update_canvas_size()
-{
-    canvas_[0] = canvas_to_arena_ratio_ * arena_[0];
-    canvas_[1] = canvas_to_arena_ratio_ * arena_[1];
-}
-
-void Window::set_arena(float width, float height)
-{
-    arena_[0] = width;
-    arena_[1] = height;
-    update_canvas_size();
 }
 
 int Window::init()
@@ -184,6 +168,17 @@ int Window::simulate(simptr sim)
     return er;
 }
 
+void Window::updateCanvasSize()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    canvas_[0] = io.DisplaySize.x;
+    canvas_[1] = io.DisplaySize.y;
+}
+
+size_t Window::getWidth() { return ImGui::GetIO().DisplaySize.x; }
+
+size_t Window::getHeight() { return ImGui::GetIO().DisplaySize.y; }
+
 int Window::renderScene()
 {
     bool render = false;
@@ -209,12 +204,10 @@ int Window::renderScene()
     if (!render)
         return -1;
 
-    int lastUsing = 0;
-    ImGuiIO& io = ImGui::GetIO();
-    (void)io;
+    // Update canvas size.
+    updateCanvasSize();
 
     auto dim = sim_->dim;
-    float glf1[4];
 
     // Poll events.
     glfwPollEvents();
@@ -226,8 +219,8 @@ int Window::renderScene()
     //
     // Drawing starts.
     //
-    ImGui::SetNextWindowPos({ canvas_[0],  0 }, 0, {1.f, 0});
-    ImGui::SetNextWindowSize({0.f, canvas_[1]});
+    ImGui::SetNextWindowPos({ canvas_[0], 0 }, 0, { 1.f, 0 });
+    ImGui::SetNextWindowSize({ 0.f, canvas_[1] });
 
     ImGui::Begin("Menu");
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
