@@ -73,8 +73,8 @@ public:
 
     void updateCanvasSize();
 
-    int writeTIFF(const char* filename, const char* description, size_t x,
-        size_t y, size_t width, size_t height, int compression);
+    int writeTIFF(
+        const char* filename, const char* description, int compression);
 
     /**
      * Get the graphics type. Scaling functions uses this information.

@@ -247,12 +247,9 @@ int Window::renderScene()
     ImGui::InputText("", snapshotName_, 40);
     ImGui::SameLine();
     if (ImGui::Button("Snapshot")) {
-        writeTIFF(snapshotName_, "OpenGL picture", 0, 0,
-            gui::gGraphicsParam_.OpenGLWidth(),
-            gui::gGraphicsParam_.OpenGLHeight(), -1);
+        writeTIFF(snapshotName_, "OpenGL picture", -1);
         numSnapshots_ += 1;
-        strcpy(
-            snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
+        strcpy(snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
     }
     ImGui::Separator();
 
@@ -333,21 +330,35 @@ int Window::renderScene()
  * the use of the libtiff library that was written by Sam Leffler and can be
  * downloaded from www.libtiff.org.
  */
-int Window::writeTIFF(const char* filename, const char* description, size_t x,
-    size_t y, size_t width, size_t height, int compression)
+int Window::writeTIFF(
+    const char* filename, const char* description, int compression)
 {
     TIFF* file;
     GLubyte *image, *p;
-    int i;
+
+
+    GLint viewport[4] = { 0 };
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    auto width = viewport[2];
+    auto height = viewport[3];
+    auto x = viewport[0];
+    auto y = viewport[1];
+
+    fmt::print(stdout, "w={} h={} viewport={}\n", width, height, viewport);
+    fflush(stdout);
 
     if (compression == -1)
         compression = COMPRESSION_PACKBITS;
     file = TIFFOpen(filename, "w");
+
     if (!file)
         return 1;
+
     image = (GLubyte*)malloc(width * height * sizeof(GLubyte) * 3);
     if (!image)
         return 1;
+
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
     TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (unsigned int)width);
@@ -360,7 +371,8 @@ int Window::writeTIFF(const char* filename, const char* description, size_t x,
     TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
     TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
     p = image;
-    for (i = height - 1; i >= 0; i--) {
+
+    for (int i = height - 1; i >= 0; i--) {
         if (TIFFWriteScanline(file, p, i, 0) < 0) {
             free(image);
             TIFFClose(file);
