@@ -226,6 +226,9 @@ int Window::renderScene()
     //
     // Drawing starts.
     //
+    ImGui::SetNextWindowPos({ 0, 0 });
+    // ImGui::SetNextWindowSize({menuWindowSize, canvas_[1]});
+
     ImGui::Begin("Menu");
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
@@ -236,9 +239,14 @@ int Window::renderScene()
     ImGui::Separator();
     ImGui::ColorEdit4("Bg Color", sim_->graphss->backcolor);
     ImGui::ColorEdit4("Frame Color", sim_->graphss->framecolor);
-    ImGui::ColorEdit4("Grid Color", sim_->graphss->gridcolor);
     ImGui::ColorEdit4("Text Color", sim_->graphss->textcolor);
+    ImGui::ColorEdit4("Grid Color", sim_->graphss->gridcolor);
 
+    gui::gGraphicsParam_.CanvasOffsetX = 10 + ImGui::GetWindowWidth();
+
+    ImGui::Separator();
+
+#if 0
     ImGui::Separator();
     ImGui::LabelText("ClipSize", "%f", gui::gGraphicsParam_.ClipSize);
     ImGui::LabelText("ClipMid", "%5.2f,%5.2f,%5.2f",
@@ -248,13 +256,16 @@ int Window::renderScene()
         gui::gGraphicsParam_.ClipLeft, gui::gGraphicsParam_.ClipRight,
         gui::gGraphicsParam_.ClipTop, gui::gGraphicsParam_.ClipBot,
         gui::gGraphicsParam_.ClipFront, gui::gGraphicsParam_.ClipBack);
+#endif
 
     ImGui::End();
 
     // Render the simulation.
     gui::RenderSim(sim_.get(), nullptr);
 
-    // Render now.
+    //
+    // Render the window
+    //
     ImGui::Render();
 
     //

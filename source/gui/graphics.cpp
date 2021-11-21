@@ -1,9 +1,9 @@
-/* Steven Andrews, started 10/22/2001.
- This is a library of functions for the Smoldyn program.
- See documentation called SmoldynManual.pdf and SmoldynCodeDoc.pdf, and the
- Smoldyn website, which is at www.smoldyn.org. Copyright 2003-2016 by Steven
- Andrews.  This work is distributed under the terms of the Gnu Lesser General
- Public License (LGPL). */
+/*
+ * GUI functions.
+ * Author: Dilawar Singh <dilawar.s.rajput@gmail.com>
+ *
+ * Modified from opengl2.c written by Steven Andrews
+ */
 
 #include <cfloat>
 #include <cmath>
@@ -25,7 +25,6 @@ using namespace std;
 #endif
 
 #include "graphics.h"
-#include "helper.hpp"
 
 constexpr double PI = 3.14159265358979323846;
 
@@ -39,34 +38,20 @@ struct GraphicsParam gGraphicsParam_;
  */
 int GraphicsUpdateInit(simptr sim)
 {
-    graphicsssptr graphss;
-    int qflag, tflag, dim;
-    wallptr* wlist;
+    fmt::print("GraphicsUpdateInit\n");
 
-    graphss = sim->graphss;
-    tflag = strchr(sim->flags, 't') ? 1 : 0;
-    if (tflag || graphss->graphics == 0)
-        return 0;
+    auto graphss = sim->graphss;
+    auto dim = sim->dim;
+    auto wlist = sim->wlist;
 
-    qflag = strchr(sim->flags, 'q') ? 1 : 0;
-    gl2glutInit(NULL, NULL);
-    gl2SetOptionInt("Fix2DAspect", 1);
-    gl2SetOptionVoid("FreeFunc", (void*)&simfree);
-    gl2SetOptionVoid("FreePointer", (void*)sim);
-    if (!qflag)
-        simLog(sim, 2, "Starting simulation\n");
-    dim = sim->dim;
-    wlist = sim->wlist;
     if (dim == 1)
-        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
-            0, 0, 0, 0);
+        ComputeParams<double>(wlist[0]->pos, wlist[1]->pos, 0, 0, 0, 0);
     else if (dim == 2)
-        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
-            (float)wlist[2]->pos, (float)wlist[3]->pos, 0, 0);
+        ComputeParams<double>(
+            wlist[0]->pos, wlist[1]->pos, wlist[2]->pos, wlist[3]->pos, 0, 0);
     else {
-        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
-            (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
-            (float)wlist[5]->pos);
+        ComputeParams<double>(wlist[0]->pos, wlist[1]->pos, wlist[2]->pos,
+            wlist[3]->pos, wlist[4]->pos, wlist[5]->pos);
         if (sim->srfss) {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -96,6 +81,107 @@ int GraphicsUpdateLists(simptr sim)
         glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     }
     return 0;
+}
+
+void DrawBoxD(double* pt1, double* pt2, int dim)
+{
+    if (dim == 1) {
+        glBegin(GL_LINES);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glEnd();
+        return;
+    }
+
+    if (dim == 2) {
+        glBegin(GL_LINE_LOOP);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glVertex3d(pt2[0], pt2[1], pt1[2]);
+        glVertex3d(pt1[0], pt2[1], pt1[2]);
+        glEnd();
+        return;
+    }
+
+    glBegin(GL_LINE_STRIP);
+    glVertex3d(pt1[0], pt1[1], pt1[2]);
+    glVertex3d(pt1[0], pt1[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt1[2]);
+    glVertex3d(pt1[0], pt1[1], pt1[2]);
+    glVertex3d(pt2[0], pt1[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt1[2]);
+    glEnd();
+    glBegin(GL_LINES);
+    glVertex3d(pt1[0], pt1[1], pt2[2]);
+    glVertex3d(pt2[0], pt1[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt2[2]);
+    glVertex3d(pt2[0], pt2[1], pt2[2]);
+    glVertex3d(pt1[0], pt2[1], pt1[2]);
+    glVertex3d(pt2[0], pt2[1], pt1[2]);
+    glEnd();
+    return;
+}
+
+void DrawGridD(double* pt1, double* pt2, int* n, int dim)
+{
+    double delta1, delta2;
+    int i, j;
+
+    if (dim == 1) {
+        glBegin(GL_POINTS);
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        for (i = 0; i <= n[0]; i++)
+            glVertex3d(pt1[0] + i * delta1, pt1[1], pt1[2]);
+        glEnd();
+        return;
+    }
+
+    if (dim == 2) {
+        glBegin(GL_LINES);
+        delta1 = (pt2[1] - pt1[1]) / n[1];
+        for (i = 0; i <= n[1]; i++) {
+            glVertex3d(pt1[0], pt1[1] + i * delta1, pt1[2]);
+            glVertex3d(pt2[0], pt1[1] + i * delta1, pt1[2]);
+        }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        for (i = 0; i <= n[0]; i++) {
+            glVertex3d(pt1[0] + i * delta1, pt1[1], pt1[2]);
+            glVertex3d(pt1[0] + i * delta1, pt2[1], pt1[2]);
+        }
+        glEnd();
+        return;
+    }
+
+    if (dim == 3) {
+        glBegin(GL_LINES);
+        delta1 = (pt2[1] - pt1[1]) / n[1];
+        delta2 = (pt2[2] - pt1[2]) / n[2];
+        for (i = 0; i <= n[1]; i++)
+            for (j = 0; j <= n[2]; j++) {
+                glVertex3d(pt1[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
+                glVertex3d(pt2[0], pt1[1] + i * delta1, pt1[2] + j * delta2);
+            }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        delta2 = (pt2[2] - pt1[2]) / n[2];
+        for (i = 0; i <= n[0]; i++)
+            for (j = 0; j <= n[2]; j++) {
+                glVertex3d(pt1[0] + i * delta1, pt1[1], pt1[2] + j * delta2);
+                glVertex3d(pt1[0] + i * delta1, pt2[1], pt1[2] + j * delta2);
+            }
+        delta1 = (pt2[0] - pt1[0]) / n[0];
+        delta2 = (pt2[1] - pt1[1]) / n[1];
+        for (i = 0; i <= n[0]; i++)
+            for (j = 0; j <= n[1]; j++) {
+                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt1[2]);
+                glVertex3d(pt1[0] + i * delta1, pt1[1] + j * delta2, pt2[2]);
+            }
+        glEnd();
+    }
+    return;
 }
 
 /* graphicsupdateparams */
@@ -846,8 +932,8 @@ void RenderMolecs(simptr sim)
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
                         glPointSize((GLfloat)mols->display[i][ms]);
-                        glColor3fv(ConvertTo<float>(
-                            mols->color[i][ms], glf1, 3));
+                        glColor3fv(
+                            ConvertTo<float>(mols->color[i][ms], glf1, 3));
                         glBegin(GL_POINTS);
                         if (dim == 1)
                             glVertex3d((GLdouble)mptr->pos[0], (GLdouble)ymid,
@@ -856,8 +942,7 @@ void RenderMolecs(simptr sim)
                             glVertex3d((GLdouble)(mptr->pos[0]),
                                 (GLdouble)(mptr->pos[1]), (GLdouble)zmid);
                         else
-                            glVertex3fv(
-                                ConvertTo<float>(mptr->pos, glf1, 3));
+                            glVertex3fv(ConvertTo<float>(mptr->pos, glf1, 3));
                         glEnd();
                     }
                 }
@@ -877,8 +962,8 @@ void RenderMolecs(simptr sim)
                     i = mptr->ident;
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
-                        glColor3fv(ConvertTo<float>(
-                            mols->color[i][ms], glf1, 3));
+                        glColor3fv(
+                            ConvertTo<float>(mols->color[i][ms], glf1, 3));
                         glPushMatrix();
                         if (dim == 1)
                             glTranslated((GLdouble)(mptr->pos[0]),
@@ -953,8 +1038,8 @@ void RenderLattice(simptr sim)
                         poslo[2] = positions[3 * i + 2] - 0.5 * lattice->dx[2];
                         poshi[2] = positions[3 * i + 2] + 0.5 * lattice->dx[2];
                     }
-                    glColor3fv(ConvertTo<float>(
-                        mols->color[ismol][MSsoln], glf1, 3));
+                    glColor3fv(
+                        ConvertTo<float>(mols->color[ismol][MSsoln], glf1, 3));
                     gl2DrawBoxFaceD(poslo, poshi, dim == 3 ? 3 : 2);
                 }
             }
@@ -963,15 +1048,12 @@ void RenderLattice(simptr sim)
     return;
 }
 
-/* RenderSim */
+/**
+ * RenderSim
+ */
 void RenderSim(simptr sim, void* data)
 {
-    double pt1[DIMMAX], pt2[DIMMAX];
-    GLfloat glf1[4];
-
-    Initialize(sim);
-    const auto size = ImGui::GetWindowSize();
-    ChangeSize(size.x, size.y);
+    std::array<double, DIMMAX> pt1 = { 0.f }, pt2 = { 0.f };
 
     auto graphss = sim->graphss;
     if (!graphss || graphss->graphics == 0)
@@ -979,24 +1061,34 @@ void RenderSim(simptr sim, void* data)
 
     auto dim = sim->dim;
     auto wlist = sim->wlist;
-    if (dim < 3)
-        glClear(GL_COLOR_BUFFER_BIT);
-    else
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    Initialize(sim);
+
+    gGraphicsParam_.computeSize();
+
+    ChangeSize();
 
     if (dim == 3)
         RenderMolecs(sim);
 
-    if (graphss->framepts) { // draw bounding box
+    //
+    // Draw bounding box
+    //
+    if (graphss->framepts) {
         pt1[0] = wlist[0]->pos;
         pt2[0] = wlist[1]->pos;
         pt1[1] = dim > 1 ? wlist[2]->pos : 0;
         pt2[1] = dim > 1 ? wlist[3]->pos : 0;
         pt1[2] = dim > 2 ? wlist[4]->pos : 0;
         pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-        glColor4fv(ConvertTo<float, float>(graphss->framecolor, glf1, 4));
-        glLineWidth((GLfloat)graphss->framepts);
-        gl2DrawBoxD(pt1, pt2, dim);
+
+        // fmt::print("Drawing bounding box: {} {}: {} {}\n", graphss->framepts,
+        //     graphss->framecolor, pt1, pt2);
+
+        glColor4fv(&graphss->framecolor[0]);
+        glLineWidth((float)graphss->framepts);
+
+        DrawBoxD(pt1.data(), pt2.data(), dim);
     }
 
     if (graphss->gridpts) {
@@ -1006,12 +1098,12 @@ void RenderSim(simptr sim, void* data)
         pt2[1] = dim > 1 ? pt1[1] + sim->boxs->size[1] * sim->boxs->side[1] : 0;
         pt1[2] = dim > 2 ? sim->boxs->min[2] : 0;
         pt2[2] = dim > 2 ? pt1[2] + sim->boxs->size[2] * sim->boxs->side[2] : 0;
-        glColor4fv(ConvertTo<float>(graphss->gridcolor, glf1, 4));
+        glColor4fv(&graphss->gridcolor[0]);
         if (dim == 1)
-            glPointSize((GLfloat)graphss->gridpts);
+            glPointSize((float)graphss->gridpts);
         else
-            glLineWidth((GLfloat)graphss->gridpts);
-        gl2DrawGridD(pt1, pt2, sim->boxs->side, dim);
+            glLineWidth((float)graphss->gridpts);
+        DrawGridD(pt1.data(), pt2.data(), sim->boxs->side, dim);
     }
 
     if (dim < 3)
@@ -1027,68 +1119,14 @@ void RenderSim(simptr sim, void* data)
     return;
 }
 
-void GL2_Initialize(
-    float xlo, float xhi, float ylo, float yhi, float zlo, float zhi)
-{
-
-    if (ylo == yhi && zlo == zhi)
-        gGraphicsParam_.Dimension = 1;
-    else if (zlo == zhi)
-        gGraphicsParam_.Dimension = 2;
-    else
-        gGraphicsParam_.Dimension = 3;
-
-    gGraphicsParam_.ClipSize = 1.05
-        * ::sqrt((xhi - xlo) * (xhi - xlo) + (yhi - ylo) * (yhi - ylo)
-            + (zhi - zlo) * (zhi - zlo));
-    if (approximatelyEqual(gGraphicsParam_.ClipSize, 0.f, 0.1f))
-        gGraphicsParam_.ClipSize = 1.0f;
-    assert(gGraphicsParam_.ClipSize != 0.0f);
-
-    gGraphicsParam_.ClipMidx = (xhi - xlo) / 2.0 + xlo;
-    gGraphicsParam_.ClipMidy = (yhi - ylo) / 2.0 + ylo;
-    gGraphicsParam_.ClipMidz = (zhi - zlo) / 2.0 + zlo;
-
-    gGraphicsParam_.ClipLeft
-        = gGraphicsParam_.ClipMidx - gGraphicsParam_.ClipSize / 2.0;
-    gGraphicsParam_.ClipRight
-        = gGraphicsParam_.ClipMidx + gGraphicsParam_.ClipSize / 2.0;
-    gGraphicsParam_.ClipBot
-        = gGraphicsParam_.ClipMidy - gGraphicsParam_.ClipSize / 2.0;
-    gGraphicsParam_.ClipTop
-        = gGraphicsParam_.ClipMidy + gGraphicsParam_.ClipSize / 2.0;
-    gGraphicsParam_.ClipBack
-        = gGraphicsParam_.ClipMidz - gGraphicsParam_.ClipSize / 2.0;
-    gGraphicsParam_.ClipFront
-        = gGraphicsParam_.ClipMidz + gGraphicsParam_.ClipSize / 2.0;
-
-    if (gGraphicsParam_.Dimension == 2) {
-        gGraphicsParam_.ClipLeft = xlo;
-        gGraphicsParam_.ClipRight = xhi;
-        gGraphicsParam_.ClipBot = ylo;
-        gGraphicsParam_.ClipTop = yhi;
-    }
-
-    gGraphicsParam_.Xtrans = gGraphicsParam_.Ytrans = 0;
-    gGraphicsParam_.Near = -gGraphicsParam_.ClipSize / 2.0;
-
-    // gGraphicsParam_.Aspect = 1.0;
-    // gGraphicsParam_.Gl2PauseState = 0;
-    // glMatrixMode(GL_MODELVIEW);
-    // glLoadIdentity();
-    // glTranslatef(0, 10, 0);
-
-    if (gGraphicsParam_.Dimension == 3) {
-        glEnable(GL_DEPTH_TEST);
-    }
-    return;
-}
-
 /* ChangeSize */
-void ChangeSize(int w, int h)
+void ChangeSize()
 {
     float clipheight, clipwidth;
     float nearold, m[16];
+
+    auto w = gGraphicsParam_.CanvasWidth;
+    auto h = gGraphicsParam_.CanvasHeight;
 
     assert(w > 0);
     assert(h > 0);
@@ -1098,8 +1136,6 @@ void ChangeSize(int w, int h)
 
     if (h == 0)
         h = 1;
-
-    glViewport(0, 0, w, h);
 
     if (gGraphicsParam_.Dimension < 3) {
         if (w <= h) {
@@ -1147,26 +1183,36 @@ void ChangeSize(int w, int h)
         glTranslatef(0, 0, nearold - gGraphicsParam_.Near);
         glMultMatrixf(m);
     }
+
+    gGraphicsParam_.setViewPort();
     return;
 }
 
 void Initialize(simptr sim)
 {
+    //
+    // Clear buffers to preset value.
+    //
     const auto dim = sim->dim;
-    const auto wlist = sim->wlist;
+    if (dim < 3)
+        glClear(GL_COLOR_BUFFER_BIT);
+    else
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    const auto wlist = sim->wlist;
     if (dim == 1) {
-        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos, 0, 0, 0, 0);
+        ComputeParams(
+            (float)wlist[0]->pos, (float)wlist[1]->pos, 0.f, 0.f, 0.f, 0.f);
         return;
     }
 
     if (dim == 2) {
-        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
-            (float)wlist[2]->pos, (float)wlist[3]->pos, 0, 0);
+        ComputeParams((float)wlist[0]->pos, (float)wlist[1]->pos,
+            (float)wlist[2]->pos, (float)wlist[3]->pos, 0.f, 0.f);
         return;
     }
 
-    GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
+    ComputeParams((float)wlist[0]->pos, (float)wlist[1]->pos,
         (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
         (float)wlist[5]->pos);
 
