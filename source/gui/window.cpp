@@ -226,8 +226,8 @@ int Window::renderScene()
     //
     // Drawing starts.
     //
-    ImGui::SetNextWindowPos({ 0, 0 });
-    // ImGui::SetNextWindowSize({menuWindowSize, canvas_[1]});
+    ImGui::SetNextWindowPos({ canvas_[0],  0 }, 0, {1.f, 0});
+    ImGui::SetNextWindowSize({0.f, canvas_[1]});
 
     ImGui::Begin("Menu");
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),

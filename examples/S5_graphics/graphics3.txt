@@ -27,7 +27,7 @@ difc red 3
 difc green 1
 
 time_start 0
-time_stop 100
+time_stop 1000
 time_step 0.1
 
 mol 100 red 20 30 20

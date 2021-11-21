@@ -1065,7 +1065,6 @@ void RenderSim(simptr sim, void* data)
     Initialize(sim);
 
     gGraphicsParam_.computeSize();
-
     ChangeSize();
 
     if (dim == 3)
@@ -1137,7 +1136,9 @@ void ChangeSize()
     if (h == 0)
         h = 1;
 
-    if (gGraphicsParam_.Dimension < 3) {
+    gGraphicsParam_.setViewPort();
+
+    if (gGraphicsParam_.Dimension < 3 && gGraphicsParam_.Fix2DAspect) {
         if (w <= h) {
             assert(gGraphicsParam_.Zoom != 0);
             clipheight
@@ -1164,14 +1165,16 @@ void ChangeSize()
         glLoadIdentity();
     } else {
         gGraphicsParam_.Aspect = 1.0 * w / h;
+
         nearold = gGraphicsParam_.Near;
         if (w >= h)
             gGraphicsParam_.Near = gGraphicsParam_.ClipSize / 2.0
-                / tan(gGraphicsParam_.FieldOfView * PI / 180.0 / 2.0);
+                / ::tan(gGraphicsParam_.FieldOfView * PI / 180.0 / 2.0);
         else
             gGraphicsParam_.Near = gGraphicsParam_.ClipSize / 2.0
                 / tan(gGraphicsParam_.FieldOfView * gGraphicsParam_.Aspect * PI
                     / 180.0 / 2.0);
+
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         gluPerspective(gGraphicsParam_.FieldOfView, gGraphicsParam_.Aspect,
@@ -1184,7 +1187,6 @@ void ChangeSize()
         glMultMatrixf(m);
     }
 
-    gGraphicsParam_.setViewPort();
     return;
 }
 

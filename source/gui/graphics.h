@@ -62,17 +62,16 @@ struct GraphicsParam {
     size_t CanvasHeight = 0;
 
     size_t CanvasOffsetX = 0;
+
     size_t CanvasOffsetY = 0;
 
     size_t canvasWidth()
     {
-        computeSize();
         return CanvasWidth - CanvasOffsetX - padding;
     }
 
     size_t canvasHeight()
     {
-        computeSize();
         return CanvasHeight - CanvasOffsetY - padding;
     }
 
@@ -94,7 +93,7 @@ struct GraphicsParam {
         const auto size = ImGui::GetWindowSize();
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        glViewport(CanvasOffsetX, size.y/2, CanvasWidth, CanvasHeight);
+        glViewport(0, 0, size.y, size.x);
     }
 
     void print() { fmt::print("Zoom={} Dim={}", Zoom, Dimension); }
