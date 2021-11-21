@@ -68,12 +68,13 @@ public:
     int init();
     int clear();
 
-    static size_t getWidth() ;
-    static size_t getHeight() ;
-
-    void draw_limits(); // debug
+    static size_t getWidth();
+    static size_t getHeight();
 
     void updateCanvasSize();
+
+    int writeTIFF(const char* filename, const char* description, size_t x,
+        size_t y, size_t width, size_t height, int compression);
 
     /**
      * Get the graphics type. Scaling functions uses this information.
@@ -85,7 +86,6 @@ public:
      * normalized. In this case, we need to map (-1, 1) to (H, W).
      */
     inline bool isArenaNormalized() const { return false; }
-
 
     /**
      * Convert a double* to ImVec2
@@ -110,6 +110,11 @@ public:
     }
 
 protected:
+    bool paused_ = false;
+
+    char snapshotName_[120] = "OpenGL00000.tif";
+    size_t numSnapshots_ = 0;
+
 private:
     /* data */
     const char* name_;
@@ -123,7 +128,7 @@ private:
 
     std::array<float, DIMMAX> canvas_; // Size of canvas. Usually 2x of arena_
 
-    unsigned int fbo_;
+    size_t nframe_ = 0;
 };
 
 }

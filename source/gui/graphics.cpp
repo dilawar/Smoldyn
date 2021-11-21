@@ -1064,7 +1064,7 @@ void RenderSim(simptr sim, void* data)
 
     Initialize(sim);
 
-    gGraphicsParam_.computeSize();
+    gGraphicsParam_.computeOpenGLSize();
     ChangeSize();
 
     if (dim == 3)

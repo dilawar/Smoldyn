@@ -12,6 +12,10 @@
 #include "window.hpp"
 
 #include <vector>
+#include <thread>
+#include <chrono>
+
+#include "tiffio.h"
 
 namespace smoldyn {
 
@@ -144,6 +148,7 @@ int Window::graphicsUpdate()
     graphss->condition = SCparams;
 
     gui::GraphicsUpdate(sim_.get());
+    return 0;
 }
 
 int Window::simulate(simptr sim)
@@ -157,11 +162,14 @@ int Window::simulate(simptr sim)
     er = simdocommands(sim);
 
     if (!er) {
-        size_t nFrame = 0;
         while ((er = simulatetimestep(sim)) == 0) {
-            graphicsUpdate();
-            nFrame += 1;
-            sim_->elapsedtime += difftime(time(NULL), sim->clockstt);
+            if (!paused_) {
+                graphicsUpdate();
+                nframe_ += 1;
+                sim_->elapsedtime += difftime(time(NULL), sim->clockstt);
+            } else
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
             renderScene();
         }
     }
@@ -183,9 +191,7 @@ int Window::renderScene()
 {
     bool render = false;
 
-    static int counter = 0;
     static int nthframe = 0;
-    counter += 1;  // number of frames.
     nthframe += 1; // count the frames to be skipped.
 
     auto graphss = sim_->graphss;
@@ -223,13 +229,42 @@ int Window::renderScene()
     ImGui::SetNextWindowSize({ 0.f, canvas_[1] });
 
     ImGui::Begin("Menu");
-    ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
-        _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
 
+    //
+    // Pause/Run button.
+    //
+    ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
+        _format("Frame={}, Time={} s", nframe_, sim_->elapsedtime).c_str());
+
+    if (!paused_ && ImGui::Button("⏸ Pause"))
+        paused_ = true;
+    if (paused_ && ImGui::Button(" ⏵ Run "))
+        paused_ = false;
+
+    ImGui::SameLine();
+    if (ImGui::Button("Quit")) {
+        printf("Quit\n");
+    }
+
+    ImGui::InputText("", snapshotName_, 40);
+    ImGui::SameLine();
+    if (ImGui::Button("Snapshot")) {
+        writeTIFF(snapshotName_, "OpenGL picture", 0, 0,
+            gui::gGraphicsParam_.OpenGLWidth() + 20,
+            gui::gGraphicsParam_.OpenGLHeight() + 20, -1);
+        numSnapshots_ += 1;
+        strcpy(
+            snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
+    }
+    ImGui::Separator();
+
+    //
+    // View / FoV etc.
+    //
     ImGui::SliderInt("Zoom", &gui::gGraphicsParam_.Zoom, 1, 10);
     ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, -180.f, 180.f);
-
     ImGui::Separator();
+
     ImGui::ColorEdit4("Bg Color", sim_->graphss->backcolor);
     ImGui::ColorEdit4("Frame Color", sim_->graphss->framecolor);
     ImGui::ColorEdit4("Text Color", sim_->graphss->textcolor);
@@ -254,7 +289,8 @@ int Window::renderScene()
     ImGui::End();
 
     // Render the simulation.
-    gui::RenderSim(sim_.get(), nullptr);
+    if (!paused_)
+        gui::RenderSim(sim_.get(), nullptr);
 
     //
     // Render the window
@@ -269,6 +305,53 @@ int Window::renderScene()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 
+    return 0;
+}
+
+/** writeTIFF
+ *
+ * NOTE: The following code was modified from a program called writetiff.c that
+ * was written and copyrighted by Mark Kilgard, 1997.  This function requires
+ * the use of the libtiff library that was written by Sam Leffler and can be
+ * downloaded from www.libtiff.org.
+ */
+int Window::writeTIFF(const char* filename, const char* description, size_t x,
+    size_t y, size_t width, size_t height, int compression)
+{
+    TIFF* file;
+    GLubyte *image, *p;
+    int i;
+
+    if (compression == -1)
+        compression = COMPRESSION_PACKBITS;
+    file = TIFFOpen(filename, "w");
+    if (!file)
+        return 1;
+    image = (GLubyte*)malloc(width * height * sizeof(GLubyte) * 3);
+    if (!image)
+        return 1;
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+    TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (unsigned int)width);
+    TIFFSetField(file, TIFFTAG_IMAGELENGTH, (unsigned int)height);
+    TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
+    TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
+    TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+    TIFFSetField(file, TIFFTAG_SAMPLESPERPIXEL, 3);
+    TIFFSetField(file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+    TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
+    TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
+    p = image;
+    for (i = height - 1; i >= 0; i--) {
+        if (TIFFWriteScanline(file, p, i, 0) < 0) {
+            free(image);
+            TIFFClose(file);
+            return 1;
+        }
+        p += width * sizeof(GLubyte) * 3;
+    }
+    TIFFClose(file);
+    free(image);
     return 0;
 }
 

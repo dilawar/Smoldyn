@@ -60,32 +60,18 @@ struct GraphicsParam {
 
     size_t CanvasWidth = 0;
     size_t CanvasHeight = 0;
-
     size_t CanvasOffsetX = 0;
-
     size_t CanvasOffsetY = 0;
 
-    size_t canvasWidth()
-    {
-        return CanvasWidth - CanvasOffsetX - padding;
-    }
+    size_t OpenGLWidth() { return CanvasWidth; }
 
-    size_t canvasHeight()
-    {
-        return CanvasHeight - CanvasOffsetY - padding;
-    }
+    size_t OpenGLHeight() { return CanvasHeight; }
 
-    void computeSize()
+    void computeOpenGLSize()
     {
         const auto size = ImGui::GetWindowSize();
         CanvasWidth = size.x;
         CanvasHeight = size.y;
-        CanvasOffsetY = 0;
-    }
-
-    void computeOffset(ImVec2& size)
-    {
-        //
     }
 
     void setViewPort()
