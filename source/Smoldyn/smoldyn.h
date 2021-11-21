@@ -981,10 +981,12 @@ typedef struct graphicssuperstruct
     int tiffit;                            // number of time steps per tiff save
     double framepts;                       // thickness of frame for graphics
     double gridpts;                        // thickness of virtual box grid for graphics
-    double framecolor[4];                  // frame color [c]
-    double gridcolor[4];                   // grid color [c]
-    double backcolor[4];                   // background color [c]
-    double textcolor[4];                   // text color [c]
+
+    float framecolor[4];                  // frame color [c]
+    float gridcolor[4];                   // grid color [c]
+    float backcolor[4];                   // background color [c]
+    float textcolor[4];                   // text color [c]
+
     int maxtextitems;                      // allocated size of item list
     int ntextitems;                        // actual size of item list
     char** textitems;                      // items to display with text [item]

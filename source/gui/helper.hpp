@@ -251,4 +251,27 @@ inline std::string STR(const ImVec2& vec)
     return _format("<{} {}>", vec.x, vec.y);
 }
 
+//
+// From Knuth. Thanks https://stackoverflow.com/a/253874/1805129
+//
+inline bool approximatelyEqual(float a, float b, float epsilon)
+{
+    return fabs(a - b) <= ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
+inline bool essentiallyEqual(float a, float b, float epsilon)
+{
+    return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
+inline bool definitelyGreaterThan(float a, float b, float epsilon)
+{
+    return (a - b) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
+inline bool definitelyLessThan(float a, float b, float epsilon)
+{
+    return (b - a) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
 #endif /* end of include guard: HELPER_HPP_R2QBDZCR */

@@ -25,30 +25,160 @@ using namespace std;
 #endif
 
 #include "graphics.h"
+#include "helper.hpp"
 
 constexpr double PI = 3.14159265358979323846;
 
 namespace gui {
 
-int Dimension = 1;
+// global graphics structure.
+struct GraphicsParam gGraphicsParam_;
 
-float ClipSize = 0.f;
-float ClipMidx = 0.f, ClipMidy = 0.f, ClipMidz = 0.f;
+/**
+ * graphicsupdateinit
+ */
+int GraphicsUpdateInit(simptr sim)
+{
+    graphicsssptr graphss;
+    int qflag, tflag, dim;
+    wallptr* wlist;
 
-float ClipLeft = 0.f, ClipRight = 0.f;
-float ClipBot = 0.f, ClipTop = 0.f;
-float ClipFront = 0.f, ClipBack = 0.f;
-float FieldOfView = 45.f;
-float Aspect = 1.0;
+    graphss = sim->graphss;
+    tflag = strchr(sim->flags, 't') ? 1 : 0;
+    if (tflag || graphss->graphics == 0)
+        return 0;
 
-float PixWide = 0.f, PixHigh = 0.f;
+    qflag = strchr(sim->flags, 'q') ? 1 : 0;
+    gl2glutInit(NULL, NULL);
+    gl2SetOptionInt("Fix2DAspect", 1);
+    gl2SetOptionVoid("FreeFunc", (void*)&simfree);
+    gl2SetOptionVoid("FreePointer", (void*)sim);
+    if (!qflag)
+        simLog(sim, 2, "Starting simulation\n");
+    dim = sim->dim;
+    wlist = sim->wlist;
+    if (dim == 1)
+        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
+            0, 0, 0, 0);
+    else if (dim == 2)
+        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
+            (float)wlist[2]->pos, (float)wlist[3]->pos, 0, 0);
+    else {
+        gl2Initialize(sim->filename, (float)wlist[0]->pos, (float)wlist[1]->pos,
+            (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
+            (float)wlist[5]->pos);
+        if (sim->srfss) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        }
+    }
+    return 0;
+}
 
-int Fix2DAspect = 0;
+/* graphicsupdatelists */
+int GraphicsUpdateLists(simptr sim)
+{
+    graphicsssptr graphss;
+    int tflag;
+    GLfloat f1[4];
 
-int Zoom = 0;
-int Xtrans = 0, Ytrans = 0;
-int Near = 0;
-int Gl2PauseState = 0;
+    graphss = sim->graphss;
+    tflag = strchr(sim->flags, 't') ? 1 : 0;
+    if (tflag || graphss->graphics == 0)
+        return 0;
+
+    if (graphss->graphics >= 3) {
+        glEnable(GL_LIGHTING);
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT,
+            gl2Double2GLfloat(graphss->ambiroom, f1, 4));
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
+        glEnable(GL_COLOR_MATERIAL);
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    }
+    return 0;
+}
+
+/* graphicsupdateparams */
+int GraphicsUpdateParams(simptr sim)
+{
+    graphicsssptr graphss;
+    int lt, tflag;
+    GLenum gllightnum;
+    GLfloat glf1[4];
+
+    graphss = sim->graphss;
+    tflag = strchr(sim->flags, 't') ? 1 : 0;
+    if (tflag || graphss->graphics == 0)
+        return 0;
+
+    // fmt::print("Updating BgColor: {}\n", graphss->backcolor);
+    glClearColor((GLclampf)graphss->backcolor[0],
+        (GLclampf)graphss->backcolor[1], (GLclampf)graphss->backcolor[2],
+        (GLclampf)graphss->backcolor[3]);
+
+    if (graphss->graphics >= 3) {
+        for (lt = 0; lt < MAXLIGHTS; lt++)
+            if (graphss->lightstate[lt] == LPon) {
+                if (lt == 0)
+                    gllightnum = GL_LIGHT0;
+                else if (lt == 1)
+                    gllightnum = GL_LIGHT1;
+                else if (lt == 2)
+                    gllightnum = GL_LIGHT2;
+                else if (lt == 3)
+                    gllightnum = GL_LIGHT3;
+                else if (lt == 4)
+                    gllightnum = GL_LIGHT4;
+                else if (lt == 5)
+                    gllightnum = GL_LIGHT5;
+                else if (lt == 6)
+                    gllightnum = GL_LIGHT6;
+                else
+                    gllightnum = GL_LIGHT7;
+                glLightfv(gllightnum, GL_AMBIENT,
+                    gl2Double2GLfloat(graphss->ambilight[lt], glf1, 4));
+                glLightfv(gllightnum, GL_DIFFUSE,
+                    gl2Double2GLfloat(graphss->difflight[lt], glf1, 4));
+                glLightfv(gllightnum, GL_SPECULAR,
+                    gl2Double2GLfloat(graphss->speclight[lt], glf1, 4));
+                glLightfv(gllightnum, GL_POSITION,
+                    gl2Double2GLfloat(graphss->lightpos[lt], glf1, 4));
+                glEnable(gllightnum);
+            }
+    }
+    return 0;
+}
+
+/**
+ * Update graphics structure
+ */
+int GraphicsUpdate(simptr sim)
+{
+    int er;
+    auto graphss = sim->graphss;
+
+    if (graphss) {
+        if (graphss->condition == SCinit) {
+            er = GraphicsUpdateInit(sim);
+            if (er)
+                return er;
+            graphicssetcondition(graphss, SClists, 1);
+        }
+        if (graphss->condition == SClists) {
+            er = GraphicsUpdateLists(sim);
+            if (er)
+                return er;
+            graphicssetcondition(graphss, SCparams, 1);
+        }
+        if (graphss->condition == SCparams) {
+            er = GraphicsUpdateParams(sim);
+            if (er)
+                return er;
+            graphicssetcondition(graphss, SCok, 1);
+        }
+    }
+    return 0;
+}
 
 void DrawSphere(double r, int lats, int longs)
 {
@@ -96,14 +226,14 @@ void RenderSurfaces(simptr sim)
     if (!srfss)
         return;
 
-    xlo = gl2GetNumber("ClipLeft");
-    xhi = gl2GetNumber("ClipRight");
-    ylo = gl2GetNumber("ClipBot");
-    yhi = gl2GetNumber("ClipTop");
-    xpix = gl2GetNumber("PixWide");
-    ypix = gl2GetNumber("PixHigh");
-    ymid = gl2GetNumber("ClipMidy");
-    zmid = gl2GetNumber("ClipMidz");
+    xlo = gGraphicsParam_.ClipLeft;
+    xhi = gGraphicsParam_.ClipRight;
+    ylo = gGraphicsParam_.ClipBot;
+    yhi = gGraphicsParam_.ClipTop;
+    xpix = gGraphicsParam_.PixWide;
+    ypix = gGraphicsParam_.PixHigh;
+    ymid = gGraphicsParam_.ClipMidy;
+    zmid = gGraphicsParam_.ClipMidz;
 
     if (sim->dim == 1) {
         for (s = 0; s < srfss->nsrf; s++) {
@@ -111,7 +241,7 @@ void RenderSurfaces(simptr sim)
             if (srf->fdrawmode != DMno) {
                 glLineWidth((GLfloat)srf->edgepts);
                 delta = srf->edgepts * (xhi - xlo) / xpix / 2;
-                glColor4fv(ConvertDoubleTo<float>(srf->fcolor, glfvect, 4));
+                glColor4fv(ConvertTo<float>(srf->fcolor, glfvect, 4));
                 glBegin(GL_LINES);
                 for (p = 0; p < srf->npanel[0]; p++) { // 1-D rectangles front
                     point = srf->panels[0][p]->point;
@@ -148,7 +278,7 @@ void RenderSurfaces(simptr sim)
                 glEnd();
 
                 delta *= -1;
-                glColor4fv(ConvertDoubleTo<float>(srf->bcolor, glfvect, 4));
+                glColor4fv(ConvertTo<float>(srf->bcolor, glfvect, 4));
                 glBegin(GL_LINES);
                 for (p = 0; p < srf->npanel[0]; p++) { // 1-D rectangles back
                     point = srf->panels[0][p]->point;
@@ -193,7 +323,7 @@ void RenderSurfaces(simptr sim)
             fdrawmode = srf->fdrawmode;
             bdrawmode = srf->bdrawmode;
             if (fdrawmode != DMno) {
-                glColor4fv(ConvertDoubleTo<float>(srf->fcolor, glfvect, 4));
+                glColor4fv(ConvertTo<float>(srf->fcolor, glfvect, 4));
                 if (fdrawmode & DMedge || fdrawmode & DMface) {
                     glLineWidth((GLfloat)srf->edgepts);
                     deltax = srf->edgepts * (xhi - xlo) / xpix / 2.5;
@@ -303,7 +433,7 @@ void RenderSurfaces(simptr sim)
                 if (fdrawmode & DMedge || fdrawmode & DMface) {
                     deltax *= -1;
                     deltay *= -1;
-                    glColor4fv(ConvertDoubleTo<float>(srf->bcolor, glfvect, 4));
+                    glColor4fv(ConvertTo<float>(srf->bcolor, glfvect, 4));
                     glBegin(GL_LINES);
                     for (p = 0; p < srf->npanel[0];
                          p++) { // 2-D rectangles back
@@ -451,7 +581,7 @@ void RenderSurfaces(simptr sim)
                 else
                     glCullFace(GL_BACK);
 
-                glColor4fv(ConvertDoubleTo<float>(flcolor, glfvect, 4));
+                glColor4fv(ConvertTo<float>(flcolor, glfvect, 4));
                 glLineWidth((GLfloat)srf->edgepts);
                 if (graphics >= 2 && srf->edgestipple[1] != 0xFFFF) {
                     glEnable(GL_LINE_STIPPLE);
@@ -461,9 +591,9 @@ void RenderSurfaces(simptr sim)
 
                 if (graphics >= 3) {
                     glMaterialfv(GL_FRONT, GL_SPECULAR,
-                        ConvertDoubleTo<float>(flcolor, glfvect, 4));
+                        ConvertTo<float>(flcolor, glfvect, 4));
                     glMaterialfv(GL_BACK, GL_SPECULAR,
-                        ConvertDoubleTo<float>(blcolor, glfvect, 4));
+                        ConvertTo<float>(blcolor, glfvect, 4));
                     glMateriali(GL_FRONT, GL_SHININESS, (GLint)srf->fshiny);
                     glMateriali(GL_BACK, GL_SHININESS, (GLint)srf->bshiny);
                 }
@@ -494,7 +624,7 @@ void RenderSurfaces(simptr sim)
                     glBegin(GL_TRIANGLES); // 3-D triangles
                     for (p = 0; p < srf->npanel[PStri]; p++) {
                         if (graphics >= 3)
-                            glNormal3fv(ConvertDoubleTo<float>(
+                            glNormal3fv(ConvertTo<float>(
                                 srf->panels[PStri][p]->front, glfvect, 4));
                         point = srf->panels[PStri][p]->point;
                         glVertex3d((GLdouble)(point[0][0]),
@@ -638,7 +768,7 @@ void RenderFilaments(simptr sim)
                 ;
 
             else if (drawmode & DMvert || drawmode & DMedge) {
-                glColor4fv(ConvertDoubleTo<float>(filtype->color, glfvect, 4));
+                glColor4fv(ConvertTo<float>(filtype->color, glfvect, 4));
                 if (graphics >= 2 && filtype->edgestipple[1] != 0xFFFF) {
                     glEnable(GL_LINE_STIPPLE);
                     glLineStipple((GLint)filtype->edgestipple[0],
@@ -672,8 +802,8 @@ void RenderFilaments(simptr sim)
                 glPolygonMode(GL_FRONT, GL_FILL);
                 glCullFace(GL_BACK);
                 if (graphics >= 3) {
-                    // glMaterialfv(GL_FRONT,GL_SPECULAR,ConvertDoubleTo<float>(srf->fcolor,glfvect,4));
-                    // glMaterialfv(GL_BACK,GL_SPECULAR,ConvertDoubleTo<float>(srf->bcolor,glfvect,4));
+                    // glMaterialfv(GL_FRONT,GL_SPECULAR,ConvertTo<float>(srf->fcolor,glfvect,4));
+                    // glMaterialfv(GL_BACK,GL_SPECULAR,ConvertTo<float>(srf->bcolor,glfvect,4));
                     glMateriali(GL_FRONT, GL_SHININESS, (GLint)filtype->shiny);
                 }
                 for (vtx = fil->frontbs; vtx < fil->nbs + fil->frontbs; vtx++)
@@ -703,8 +833,9 @@ void RenderMolecs(simptr sim)
     mols = sim->mols;
     if (!mols)
         return;
-    ymid = gl2GetNumber("ClipMidy");
-    zmid = gl2GetNumber("ClipMidz");
+
+    ymid = gGraphicsParam_.ClipMidy;
+    zmid = gGraphicsParam_.ClipMidz;
 
     if (sim->graphss->graphics == 1) {
         for (ll = 0; ll < sim->mols->nlist; ll++)
@@ -715,7 +846,7 @@ void RenderMolecs(simptr sim)
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
                         glPointSize((GLfloat)mols->display[i][ms]);
-                        glColor3fv(ConvertDoubleTo<float>(
+                        glColor3fv(ConvertTo<float>(
                             mols->color[i][ms], glf1, 3));
                         glBegin(GL_POINTS);
                         if (dim == 1)
@@ -726,7 +857,7 @@ void RenderMolecs(simptr sim)
                                 (GLdouble)(mptr->pos[1]), (GLdouble)zmid);
                         else
                             glVertex3fv(
-                                ConvertDoubleTo<float>(mptr->pos, glf1, 3));
+                                ConvertTo<float>(mptr->pos, glf1, 3));
                         glEnd();
                     }
                 }
@@ -746,7 +877,7 @@ void RenderMolecs(simptr sim)
                     i = mptr->ident;
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
-                        glColor3fv(ConvertDoubleTo<float>(
+                        glColor3fv(ConvertTo<float>(
                             mols->color[i][ms], glf1, 3));
                         glPushMatrix();
                         if (dim == 1)
@@ -783,9 +914,11 @@ void RenderLattice(simptr sim)
 
     mols = sim->mols;
     dim = sim->dim;
-    poslo[0] = poshi[0] = gl2GetNumber("ClipMidx");
-    poslo[1] = poshi[1] = gl2GetNumber("ClipMidy");
-    poslo[2] = poshi[2] = gl2GetNumber("ClipMidz");
+
+    poslo[0] = poshi[0] = gGraphicsParam_.ClipMidx;
+    poslo[1] = poshi[1] = gGraphicsParam_.ClipMidy;
+    poslo[2] = poshi[2] = gGraphicsParam_.ClipMidz;
+
     for (lat = 0; lat < sim->latticess->nlattice; lat++) {
         lattice = sim->latticess->latticelist[lat];
         positions = NULL;
@@ -820,7 +953,7 @@ void RenderLattice(simptr sim)
                         poslo[2] = positions[3 * i + 2] - 0.5 * lattice->dx[2];
                         poshi[2] = positions[3 * i + 2] + 0.5 * lattice->dx[2];
                     }
-                    glColor3fv(ConvertDoubleTo<float>(
+                    glColor3fv(ConvertTo<float>(
                         mols->color[ismol][MSsoln], glf1, 3));
                     gl2DrawBoxFaceD(poslo, poshi, dim == 3 ? 3 : 2);
                 }
@@ -833,22 +966,19 @@ void RenderLattice(simptr sim)
 /* RenderSim */
 void RenderSim(simptr sim, void* data)
 {
-    graphicsssptr graphss;
     double pt1[DIMMAX], pt2[DIMMAX];
-    int dim;
-    wallptr* wlist;
     GLfloat glf1[4];
 
-    graphicsupdate(sim);
-
     Initialize(sim);
+    const auto size = ImGui::GetWindowSize();
+    ChangeSize(size.x, size.y);
 
-    graphss = sim->graphss;
+    auto graphss = sim->graphss;
     if (!graphss || graphss->graphics == 0)
         return;
 
-    dim = sim->dim;
-    wlist = sim->wlist;
+    auto dim = sim->dim;
+    auto wlist = sim->wlist;
     if (dim < 3)
         glClear(GL_COLOR_BUFFER_BIT);
     else
@@ -864,7 +994,7 @@ void RenderSim(simptr sim, void* data)
         pt2[1] = dim > 1 ? wlist[3]->pos : 0;
         pt1[2] = dim > 2 ? wlist[4]->pos : 0;
         pt2[2] = dim > 2 ? wlist[5]->pos : 0;
-        glColor4fv(ConvertDoubleTo<float>(graphss->framecolor, glf1, 4));
+        glColor4fv(ConvertTo<float, float>(graphss->framecolor, glf1, 4));
         glLineWidth((GLfloat)graphss->framepts);
         gl2DrawBoxD(pt1, pt2, dim);
     }
@@ -876,7 +1006,7 @@ void RenderSim(simptr sim, void* data)
         pt2[1] = dim > 1 ? pt1[1] + sim->boxs->size[1] * sim->boxs->side[1] : 0;
         pt1[2] = dim > 2 ? sim->boxs->min[2] : 0;
         pt2[2] = dim > 2 ? pt1[2] + sim->boxs->size[2] * sim->boxs->side[2] : 0;
-        glColor4fv(ConvertDoubleTo<float>(graphss->gridcolor, glf1, 4));
+        glColor4fv(ConvertTo<float>(graphss->gridcolor, glf1, 4));
         if (dim == 1)
             glPointSize((GLfloat)graphss->gridpts);
         else
@@ -902,52 +1032,53 @@ void GL2_Initialize(
 {
 
     if (ylo == yhi && zlo == zhi)
-        Dimension = 1;
+        gGraphicsParam_.Dimension = 1;
     else if (zlo == zhi)
-        Dimension = 2;
+        gGraphicsParam_.Dimension = 2;
     else
-        Dimension = 3;
-    ClipSize = 1.05
-        * sqrt((xhi - xlo) * (xhi - xlo) + (yhi - ylo) * (yhi - ylo)
-            + (zhi - zlo) * (zhi - zlo));
-    if (ClipSize == 0)
-        ClipSize = 1.0;
-    ClipMidx = (xhi - xlo) / 2.0 + xlo;
-    ClipMidy = (yhi - ylo) / 2.0 + ylo;
-    ClipMidz = (zhi - zlo) / 2.0 + zlo;
-    ClipLeft = ClipMidx - ClipSize / 2.0;
-    ClipRight = ClipMidx + ClipSize / 2.0;
-    ClipBot = ClipMidy - ClipSize / 2.0;
-    ClipTop = ClipMidy + ClipSize / 2.0;
-    ClipBack = ClipMidz - ClipSize / 2.0;
-    ClipFront = ClipMidz + ClipSize / 2.0;
+        gGraphicsParam_.Dimension = 3;
 
-    if (Dimension == 2 && !Fix2DAspect) {
-        ClipLeft = xlo;
-        ClipRight = xhi;
-        ClipBot = ylo;
-        ClipTop = yhi;
+    gGraphicsParam_.ClipSize = 1.05
+        * ::sqrt((xhi - xlo) * (xhi - xlo) + (yhi - ylo) * (yhi - ylo)
+            + (zhi - zlo) * (zhi - zlo));
+    if (approximatelyEqual(gGraphicsParam_.ClipSize, 0.f, 0.1f))
+        gGraphicsParam_.ClipSize = 1.0f;
+    assert(gGraphicsParam_.ClipSize != 0.0f);
+
+    gGraphicsParam_.ClipMidx = (xhi - xlo) / 2.0 + xlo;
+    gGraphicsParam_.ClipMidy = (yhi - ylo) / 2.0 + ylo;
+    gGraphicsParam_.ClipMidz = (zhi - zlo) / 2.0 + zlo;
+
+    gGraphicsParam_.ClipLeft
+        = gGraphicsParam_.ClipMidx - gGraphicsParam_.ClipSize / 2.0;
+    gGraphicsParam_.ClipRight
+        = gGraphicsParam_.ClipMidx + gGraphicsParam_.ClipSize / 2.0;
+    gGraphicsParam_.ClipBot
+        = gGraphicsParam_.ClipMidy - gGraphicsParam_.ClipSize / 2.0;
+    gGraphicsParam_.ClipTop
+        = gGraphicsParam_.ClipMidy + gGraphicsParam_.ClipSize / 2.0;
+    gGraphicsParam_.ClipBack
+        = gGraphicsParam_.ClipMidz - gGraphicsParam_.ClipSize / 2.0;
+    gGraphicsParam_.ClipFront
+        = gGraphicsParam_.ClipMidz + gGraphicsParam_.ClipSize / 2.0;
+
+    if (gGraphicsParam_.Dimension == 2) {
+        gGraphicsParam_.ClipLeft = xlo;
+        gGraphicsParam_.ClipRight = xhi;
+        gGraphicsParam_.ClipBot = ylo;
+        gGraphicsParam_.ClipTop = yhi;
     }
 
-    FieldOfView = 45;
-    Zoom = 1;
-    Xtrans = Ytrans = 0;
-    Near = -ClipSize / 2.0;
-    Aspect = 1.0;
-    Gl2PauseState = 0;
+    gGraphicsParam_.Xtrans = gGraphicsParam_.Ytrans = 0;
+    gGraphicsParam_.Near = -gGraphicsParam_.ClipSize / 2.0;
 
-    fmt::print("ClipMidx={}, ClipMidy={}, ClipMidz={}, Near={}\n", ClipMidx,
-        ClipMidy, ClipMidz, Near);
+    // gGraphicsParam_.Aspect = 1.0;
+    // gGraphicsParam_.Gl2PauseState = 0;
+    // glMatrixMode(GL_MODELVIEW);
+    // glLoadIdentity();
+    // glTranslatef(0, 10, 0);
 
-    glClearColor(1, 1, 1, 1);
-    glColor3f(0, 0, 0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glTranslatef(-ClipMidx, -ClipMidy, -ClipMidz);
-
-    if (Dimension == 3) {
+    if (gGraphicsParam_.Dimension == 3) {
         glEnable(GL_DEPTH_TEST);
     }
     return;
@@ -956,51 +1087,64 @@ void GL2_Initialize(
 /* ChangeSize */
 void ChangeSize(int w, int h)
 {
-    GLfloat clipheight, clipwidth;
-    GLfloat nearold, m[16];
+    float clipheight, clipwidth;
+    float nearold, m[16];
 
-    PixWide = w;
-    PixHigh = h;
+    assert(w > 0);
+    assert(h > 0);
+
+    gGraphicsParam_.PixWide = w;
+    gGraphicsParam_.PixHigh = h;
+
     if (h == 0)
         h = 1;
 
     glViewport(0, 0, w, h);
 
-    if (Dimension < 3 && Fix2DAspect) {
+    if (gGraphicsParam_.Dimension < 3) {
         if (w <= h) {
-            clipheight = ClipSize / Zoom * h / w;
-            clipwidth = ClipSize / Zoom;
+            assert(gGraphicsParam_.Zoom != 0);
+            clipheight
+                = gGraphicsParam_.ClipSize / gGraphicsParam_.Zoom * h / w;
+            clipwidth = gGraphicsParam_.ClipSize / gGraphicsParam_.Zoom;
         } else {
-            clipheight = ClipSize / Zoom;
-            clipwidth = ClipSize / Zoom * w / h;
+            clipheight = gGraphicsParam_.ClipSize / gGraphicsParam_.Zoom;
+            clipwidth = gGraphicsParam_.ClipSize / gGraphicsParam_.Zoom * w / h;
         }
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        glOrtho(ClipLeft, ClipLeft + clipwidth, ClipBot, ClipBot + clipheight,
-            ClipFront, ClipBack);
+        glOrtho(gGraphicsParam_.ClipLeft, gGraphicsParam_.ClipLeft + clipwidth,
+            gGraphicsParam_.ClipBot, gGraphicsParam_.ClipBot + clipheight,
+            gGraphicsParam_.ClipFront, gGraphicsParam_.ClipBack);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-    } else if (Dimension < 3) {
+    } else if (gGraphicsParam_.Dimension < 3) {
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        glOrtho(ClipLeft, ClipRight, ClipBot, ClipTop, ClipFront, ClipBack);
+        glOrtho(gGraphicsParam_.ClipLeft, gGraphicsParam_.ClipRight,
+            gGraphicsParam_.ClipBot, gGraphicsParam_.ClipTop,
+            gGraphicsParam_.ClipFront, gGraphicsParam_.ClipBack);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
     } else {
-        Aspect = 1.0 * w / h;
-        nearold = Near;
+        gGraphicsParam_.Aspect = 1.0 * w / h;
+        nearold = gGraphicsParam_.Near;
         if (w >= h)
-            Near = ClipSize / 2.0 / tan(FieldOfView * PI / 180.0 / 2.0);
+            gGraphicsParam_.Near = gGraphicsParam_.ClipSize / 2.0
+                / tan(gGraphicsParam_.FieldOfView * PI / 180.0 / 2.0);
         else
-            Near
-                = ClipSize / 2.0 / tan(FieldOfView * Aspect * PI / 180.0 / 2.0);
+            gGraphicsParam_.Near = gGraphicsParam_.ClipSize / 2.0
+                / tan(gGraphicsParam_.FieldOfView * gGraphicsParam_.Aspect * PI
+                    / 180.0 / 2.0);
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        gluPerspective(FieldOfView, Aspect, Near, ClipSize + Near);
+        gluPerspective(gGraphicsParam_.FieldOfView, gGraphicsParam_.Aspect,
+            gGraphicsParam_.Near,
+            gGraphicsParam_.ClipSize + gGraphicsParam_.Near);
         glMatrixMode(GL_MODELVIEW);
         glGetFloatv(GL_MODELVIEW_MATRIX, m);
         glLoadIdentity();
-        glTranslatef(0, 0, nearold - Near);
+        glTranslatef(0, 0, nearold - gGraphicsParam_.Near);
         glMultMatrixf(m);
     }
     return;
@@ -1008,23 +1152,27 @@ void ChangeSize(int w, int h)
 
 void Initialize(simptr sim)
 {
-    ChangeSize(640, 640);
-
     const auto dim = sim->dim;
     const auto wlist = sim->wlist;
-    if (dim == 1)
+
+    if (dim == 1) {
         GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos, 0, 0, 0, 0);
-    else if (dim == 2)
+        return;
+    }
+
+    if (dim == 2) {
         GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
             (float)wlist[2]->pos, (float)wlist[3]->pos, 0, 0);
-    else {
-        GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
-            (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
-            (float)wlist[5]->pos);
-        if (sim->srfss) {
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        }
+        return;
+    }
+
+    GL2_Initialize((float)wlist[0]->pos, (float)wlist[1]->pos,
+        (float)wlist[2]->pos, (float)wlist[3]->pos, (float)wlist[4]->pos,
+        (float)wlist[5]->pos);
+
+    if (sim->srfss) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 }
 

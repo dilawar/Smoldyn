@@ -80,7 +80,6 @@ int Window::init()
     //
     // Initialize ImGui
     //
-
 #if defined(__APPLE__)
     const char* glsl_version = "#version 150";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -92,16 +91,20 @@ int Window::init()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 #endif
-    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+
+    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
 
     //
     // Create windows
     //
-    window_ = glfwCreateWindow(
-        canvas_[0], canvas_[1], "Smoldyn Window", NULL, NULL);
+    window_ = glfwCreateWindow(canvas_[0], canvas_[1],
+        fmt::format("Smoldyn {}", VERSION).c_str(), NULL, NULL);
 
     if (window_ == nullptr) {
-        fprintf(stderr, "Failed to create main windows.\n");
+        fprintf(stderr, "Failed to create main window.\n");
         initialized_ = false;
         return 1;
     }
@@ -127,8 +130,9 @@ int Window::init()
     glfwSwapInterval(1);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags
-        |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+
+    // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -137,8 +141,25 @@ int Window::init()
     ImGui_ImplGlfw_InitForOpenGL(window_, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    io.DisplaySize = ImVec2(canvas_[0], canvas_[1]);
+    io.DeltaTime = 1.0f / frame_rate_;
+
     initialized_ = true;
     return 0;
+}
+
+int Window::graphicsUpdate()
+{
+    //
+    // Initialize GraphicsParam from sim
+    //
+    assert(sim_);
+    assert(sim_->graphss);
+    auto graphss = sim_->graphss;
+
+    graphss->condition = SCparams;
+
+    gui::GraphicsUpdate(sim_.get());
 }
 
 int Window::simulate(simptr sim)
@@ -152,67 +173,18 @@ int Window::simulate(simptr sim)
     er = simdocommands(sim);
 
     if (!er) {
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2(canvas_[0], canvas_[1]);
-        io.DeltaTime = 1.0f / frame_rate_;
-
-        ImGui::GetStyle().ScaleAllSizes(2.f);
-
-        unsigned char* tex_pixels = nullptr;
-        int tex_w, tex_h;
-        io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
-
         size_t nFrame = 0;
         while ((er = simulatetimestep(sim)) == 0) {
+            graphicsUpdate();
             nFrame += 1;
             sim_->elapsedtime += difftime(time(NULL), sim->clockstt);
-            render_scene();
+            renderScene();
         }
     }
     return er;
 }
 
-int Window::render_molecules()
-{
-    auto dim = sim_->dim;
-
-    if (!sim_->mols) {
-        return 1;
-    }
-
-    ImDrawList* drawlist = ImGui::GetWindowDrawList();
-
-    for (auto ll = 0; ll < sim_->mols->nlist; ll++) {
-        if (sim_->mols->listtype[ll] == MLTsystem) {
-            for (auto m = 0; m < sim_->mols->nl[ll]; m++) {
-                auto mptr = sim_->mols->live[ll][m];
-                auto i = mptr->ident;
-                auto ms = mptr->mstate;
-
-                if (sim_->mols->display[i][ms] > 0) {
-
-                    const auto pos = PointOnCanvas(mptr->pos);
-                    const auto size = scalexy(sim_->mols->display[i][ms]);
-                    const auto clr = ArrToColor(sim_->mols->color[i][ms]);
-
-#if USE_FMT
-#if 0
-                    fmt::print("pos ({},{}), clr={}, size={}.\n", pos.x, pos.y,
-                        clr, size);
-#endif
-#endif
-                    drawlist->AddCircleFilled(
-                        pos, size /* radius */, clr, NUM_SEGMENT_IN_CIRCLE);
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
-int Window::render_scene()
+int Window::renderScene()
 {
     bool render = false;
 
@@ -239,6 +211,7 @@ int Window::render_scene()
 
     int lastUsing = 0;
     ImGuiIO& io = ImGui::GetIO();
+    (void)io;
 
     auto dim = sim_->dim;
     float glf1[4];
@@ -249,8 +222,8 @@ int Window::render_scene()
     //
     // Set background color and text color.
     //
-    ImGui::PushStyleColor(
-        ImGuiCol_WindowBg, ArrToColor(sim_->graphss->backcolor));
+    auto clr = gui::gGraphicsParam_.BgColor;
+    // ImGui::PushStyleColor(0, ArrToColorVec(clr.data()));
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -259,9 +232,26 @@ int Window::render_scene()
     //
     // Drawing starts.
     //
-    ImGui::Begin(name_);
+    ImGui::Begin("Menu");
     ImGui::TextColored(ArrToColorVec(sim_->graphss->backcolor, true),
         _format("Frame={}, Time={}s.", counter, sim_->elapsedtime).c_str());
+
+    ImGui::SliderInt("Zoom", &gui::gGraphicsParam_.Zoom, 1, 10);
+    ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, -180.f, 180.f);
+
+    ImGui::Separator();
+    ImGui::ColorPicker4("Background Color", sim_->graphss->backcolor);
+
+    ImGui::Separator();
+    ImGui::LabelText("ClipSize", "%f", gui::gGraphicsParam_.ClipSize);
+    ImGui::LabelText("ClipMid", "%5.2f,%5.2f,%5.2f",
+        gui::gGraphicsParam_.ClipMidx, gui::gGraphicsParam_.ClipMidy,
+        gui::gGraphicsParam_.ClipMidz);
+    ImGui::LabelText("Clip", "%5.2f,%5.2f\n%5.2f,%5.2f\n%5.2f,%5.2f",
+        gui::gGraphicsParam_.ClipLeft, gui::gGraphicsParam_.ClipRight,
+        gui::gGraphicsParam_.ClipTop, gui::gGraphicsParam_.ClipBot,
+        gui::gGraphicsParam_.ClipFront, gui::gGraphicsParam_.ClipBack);
+
     ImGui::End();
 
     // Render the simulation.
@@ -275,9 +265,6 @@ int Window::render_scene()
     //
     int display_w = 0, display_h = 0;
     glfwGetFramebufferSize(window_, &display_w, &display_h);
-    glViewport(10, 10, display_w - 10, display_h - 10);
-
-    // glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window_);
 

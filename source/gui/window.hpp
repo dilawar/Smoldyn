@@ -59,13 +59,11 @@ public:
 
     inline GLFWwindow* ref() const { return window_; }
 
+    int graphicsUpdate();
+
     int simulate(simptr sim);
 
-    int render_scene();
-
-    int render_molecules();
-
-    int render_grid();
+    int renderScene();
 
     int init();
     int clear();
