@@ -144,17 +144,15 @@ int Window::graphicsUpdate()
     assert(sim_);
     assert(sim_->graphss);
     auto graphss = sim_->graphss;
-
     graphss->condition = SCparams;
-
-    gui::GraphicsUpdate(sim_.get());
+    gui::GraphicsUpdate(sim_);
     return 0;
 }
 
 int Window::simulate(simptr sim)
 {
     int er;
-    sim_.reset(sim);
+    sim_ = sim;
 
     simLog(sim, 2, "Simulating\n");
 
@@ -287,7 +285,7 @@ int Window::renderScene()
 
     // Render the simulation.
     if (!paused_)
-        gui::RenderSim(sim_.get(), this);
+        gui::RenderSim(sim_, this);
 
     //
     // Rotation.

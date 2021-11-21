@@ -121,7 +121,7 @@ protected:
 private:
     /* data */
     const char* name_;
-    std::shared_ptr<simstruct> sim_;
+    simstruct* sim_;
 
     GLFWwindow* window_;
     int error_code_;
