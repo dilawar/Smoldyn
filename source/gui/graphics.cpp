@@ -83,6 +83,57 @@ int GraphicsUpdateLists(simptr sim)
     return 0;
 }
 
+/* DrawBoxFaceD */
+void DrawBoxFaceD(double* pt1, double* pt2, int dim)
+{
+    if (dim == 2) {
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt1[0], pt2[1], pt1[2]);
+        glVertex3d(pt2[0], pt2[1], pt1[2]);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glEnd();
+    } else if (dim == 3) {
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt1[0], pt2[1], pt1[2]);
+        glVertex3d(pt2[0], pt2[1], pt1[2]);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt1[1], pt2[2]);
+        glVertex3d(pt1[0], pt2[1], pt2[2]);
+        glVertex3d(pt2[0], pt2[1], pt2[2]);
+        glVertex3d(pt2[0], pt1[1], pt2[2]);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt1[0], pt1[1], pt2[2]);
+        glVertex3d(pt2[0], pt1[1], pt2[2]);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt2[1], pt1[2]);
+        glVertex3d(pt1[0], pt2[1], pt2[2]);
+        glVertex3d(pt2[0], pt2[1], pt2[2]);
+        glVertex3d(pt2[0], pt2[1], pt1[2]);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex3d(pt1[0], pt1[1], pt1[2]);
+        glVertex3d(pt1[0], pt1[1], pt2[2]);
+        glVertex3d(pt1[0], pt2[1], pt2[2]);
+        glVertex3d(pt1[0], pt2[1], pt1[2]);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex3d(pt2[0], pt1[1], pt1[2]);
+        glVertex3d(pt2[0], pt1[1], pt2[2]);
+        glVertex3d(pt2[0], pt2[1], pt2[2]);
+        glVertex3d(pt2[0], pt2[1], pt1[2]);
+        glEnd();
+    }
+    return;
+}
+
 void DrawBoxD(double* pt1, double* pt2, int dim)
 {
     if (dim == 1) {

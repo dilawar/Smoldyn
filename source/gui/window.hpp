@@ -115,6 +115,9 @@ protected:
     char snapshotName_[120] = "OpenGL00000.tif";
     size_t numSnapshots_ = 0;
 
+    std::array<float, 3> angles_ = { 0.f };
+    std::array<float, 3> old_angles_ = { 0.f };
+
 private:
     /* data */
     const char* name_;

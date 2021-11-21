@@ -250,13 +250,23 @@ int Window::renderScene()
     ImGui::SameLine();
     if (ImGui::Button("Snapshot")) {
         writeTIFF(snapshotName_, "OpenGL picture", 0, 0,
-            gui::gGraphicsParam_.OpenGLWidth() + 20,
-            gui::gGraphicsParam_.OpenGLHeight() + 20, -1);
+            gui::gGraphicsParam_.OpenGLWidth(),
+            gui::gGraphicsParam_.OpenGLHeight(), -1);
         numSnapshots_ += 1;
         strcpy(
             snapshotName_, _format("OpenGL{:05d}.tif", numSnapshots_).c_str());
     }
     ImGui::Separator();
+
+    //
+    // Rotation.
+    //
+    if (dim == 3) {
+        ImGui::SliderAngle("Rot X", &angles_[0], -180.f, 180.f);
+        ImGui::SliderAngle("Rot Y", &angles_[1], -180.f, 180.f);
+        ImGui::SliderAngle("Rot Z", &angles_[2], -180.f, 180.f);
+        ImGui::Separator();
+    }
 
     //
     // View / FoV etc.
@@ -273,24 +283,34 @@ int Window::renderScene()
     gui::gGraphicsParam_.CanvasOffsetX = 10 + ImGui::GetWindowWidth();
 
     ImGui::Separator();
-
-#if 0
-    ImGui::Separator();
-    ImGui::LabelText("ClipSize", "%f", gui::gGraphicsParam_.ClipSize);
-    ImGui::LabelText("ClipMid", "%5.2f,%5.2f,%5.2f",
-        gui::gGraphicsParam_.ClipMidx, gui::gGraphicsParam_.ClipMidy,
-        gui::gGraphicsParam_.ClipMidz);
-    ImGui::LabelText("Clip", "%5.2f,%5.2f\n%5.2f,%5.2f\n%5.2f,%5.2f",
-        gui::gGraphicsParam_.ClipLeft, gui::gGraphicsParam_.ClipRight,
-        gui::gGraphicsParam_.ClipTop, gui::gGraphicsParam_.ClipBot,
-        gui::gGraphicsParam_.ClipFront, gui::gGraphicsParam_.ClipBack);
-#endif
-
     ImGui::End();
 
     // Render the simulation.
     if (!paused_)
-        gui::RenderSim(sim_.get(), nullptr);
+        gui::RenderSim(sim_.get(), this);
+
+    //
+    // Rotation.
+    //
+    if (dim == 3) {
+        for (size_t i = 0; i < 3; ++i) {
+            if (!approximatelyEqual(angles_[i], old_angles_[i], 0.1f)) {
+                glPushMatrix();
+                glMatrixMode(GL_MODELVIEW);
+                float theta = 180 * (angles_[i] - old_angles_[i]) / M_PI;
+                old_angles_[i] = angles_[i];
+                // printf(" rotating %f deg\n", theta);
+                // fflush(stdout);
+                if (i == 0)
+                    glRotatef(theta, 1.f, 0.f, 0.f);
+                else if (i == 1)
+                    glRotatef(theta, 0.f, 1.f, 0.f);
+                else
+                    glRotatef(theta, 0.f, 0.f, 1.f);
+                glPopMatrix();
+            }
+        }
+    }
 
     //
     // Render the window
