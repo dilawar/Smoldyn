@@ -55,139 +55,106 @@
 /* main */
 int main(int argc, char** argv)
 {
+    simptr sim;
+    int i, er, pflag, wflag, tflag, Vflag, oflag;
+    char root[STRCHAR], fname[STRCHAR], flags[STRCHAR], *cptr;
 
-#ifdef USE_BOOST_LOG
-    init_logger();
-#endif
-    int exitCode = 0;
+    for (i = 0; i < STRCHAR; i++)
+        root[i] = fname[i] = flags[i] = '\0';
 
-#ifdef USE_IMGUI
-    smoldyn::Window win("Smoldyn");
-    win.init();
-#endif
-
-    try {
-        simptr sim;
-        int i, er, pflag, wflag, tflag, Vflag, oflag;
-        char root[STRCHAR], fname[STRCHAR], flags[STRCHAR], *cptr;
-
-        for (i = 0; i < STRCHAR; i++)
-            root[i] = fname[i] = flags[i] = '\0';
-        er = 0;
-        if (argc <= 1) {
-            fprintf(stderr, "Welcome to Smoldyn version %s.\n\n", VERSION);
-            fprintf(stderr, "Enter name of configuration file: ");
-            fgets(root, STRCHAR, stdin);
-            if (strchr(root, '\n'))
-                *(strchr(root, '\n')) = '\0';
+    er = 0;
+    if (argc <= 1) {
+        fprintf(stderr, "Welcome to Smoldyn version %s.\n\n", VERSION);
+        fprintf(stderr, "Enter name of configuration file: ");
+        fgets(root, STRCHAR, stdin);
+        if (strchr(root, '\n'))
+            *(strchr(root, '\n')) = '\0';
+        fprintf(stderr,
+            "Enter runtime flags (q=quiet, p=parameters only), or "
+            "'-'=none: ");
+        fgets(flags, STRCHAR, stdin);
+        if (strchr(flags, '\n'))
+            *(strchr(flags, '\n')) = '\0';
+    }
+    if (argc > 1) {
+        strncpy(root, argv[1], STRCHAR - 1);
+        root[STRCHAR - 1] = '\0';
+        argc--;
+        argv++;
+    }
+    er = Parse_CmdLineArg(&argc, argv, NULL);
+    if (er) {
+        if (er == 1)
+            fprintf(stderr, "Out of memory");
+        else
             fprintf(stderr,
-                "Enter runtime flags (q=quiet, p=parameters only), or "
-                "'-'=none: ");
-            fgets(flags, STRCHAR, stdin);
-            if (strchr(flags, '\n'))
-                *(strchr(flags, '\n')) = '\0';
-        }
-        if (argc > 1) {
-            strncpy(root, argv[1], STRCHAR - 1);
-            root[STRCHAR - 1] = '\0';
+                "Follow command line '--define' options with "
+                "key=replacement\n");
+        return 0;
+    }
+    if (argc > 1) {
+        if (argv[1][0] == '-') {
+            strncpy(flags, argv[1], STRCHAR - 1);
+            flags[STRCHAR - 1] = '\0';
+            strcpy(SimFlags, flags);
             argc--;
             argv++;
-        }
-        er = Parse_CmdLineArg(&argc, argv, NULL);
-        if (er) {
-            if (er == 1)
-                fprintf(stderr, "Out of memory");
-            else
-                fprintf(stderr,
-                    "Follow command line '--define' options with "
-                    "key=replacement\n");
+        } else {
+            fprintf(stderr,
+                "Command line format: smoldyn [config_file] [-options] "
+                "[-OpenGL_options]\n");
             return 0;
         }
-        if (argc > 1) {
-            if (argv[1][0] == '-') {
-                strncpy(flags, argv[1], STRCHAR - 1);
-                flags[STRCHAR - 1] = '\0';
-                strcpy(SimFlags, flags);
-                argc--;
-                argv++;
-            } else {
-                fprintf(stderr,
-                    "Command line format: smoldyn [config_file] [-options] "
-                    "[-OpenGL_options]\n");
-                return 0;
-            }
-        }
+    }
 
-        cptr = strrpbrk(root, ":\\/");
-        if (cptr)
-            cptr++;
-        else
-            cptr = root;
-        strcpy(fname, cptr);
-        *cptr = '\0';
+    cptr = strrpbrk(root, ":\\/");
+    if (cptr)
+        cptr++;
+    else
+        cptr = root;
+    strcpy(fname, cptr);
+    *cptr = '\0';
 
-        oflag = strchr(flags, 'o') ? 1 : 0;
-        pflag = strchr(flags, 'p') ? 1 : 0;
-        Vflag = strchr(flags, 'V') ? 1 : 0;
-        if (!strcmp(fname, "-V"))
-            Vflag = 1;
-        wflag = strchr(flags, 'w') ? 1 : 0;
-        tflag = strchr(flags, 't') ? 1 : 0;
+    oflag = strchr(flags, 'o') ? 1 : 0;
+    pflag = strchr(flags, 'p') ? 1 : 0;
+    Vflag = strchr(flags, 'V') ? 1 : 0;
+    if (!strcmp(fname, "-V"))
+        Vflag = 1;
+    wflag = strchr(flags, 'w') ? 1 : 0;
+    tflag = strchr(flags, 't') ? 1 : 0;
 
-        if (Vflag) {
-            simLog(NULL, 4, "%s\n", VERSION);
-            return 0;
-        }
-        sim = NULL;
+    if (Vflag) {
+        simLog(NULL, 4, "%s\n", VERSION);
+        return 0;
+    }
+    sim = NULL;
 
 #ifdef OPTION_VCELL
-        er = simInitAndLoad(root, fname, &sim, flags,
-            new SimpleValueProviderFactory(), new SimpleMesh());
+    er = simInitAndLoad(root, fname, &sim, flags,
+        new SimpleValueProviderFactory(), new SimpleMesh());
 #else
-        er = simInitAndLoad(root, fname, &sim, flags);
+    er = simInitAndLoad(root, fname, &sim, flags);
 #endif
 
-#ifndef USE_IMGUI
-        if (!er) {
-            if (!tflag && sim->graphss && sim->graphss->graphics != 0)
-                gl2glutInit(&argc, argv);
-            er = simUpdateAndDisplay(sim);
-        }
-#endif
+    if (!er)
+        er = simUpdateAndDisplay(sim);
 
-        if (!oflag && !pflag && !er)
-            er = scmdopenfiles((cmdssptr)sim->cmds, wflag);
-        if (pflag || er) {
-            simLog(sim, 4, "%sSimulation skipped\n", er ? "\n" : "");
-        } else {
+    if (!oflag && !pflag && !er)
+        er = scmdopenfiles((cmdssptr)sim->cmds, wflag);
 
-#ifndef USE_IMGUI
-            fflush(stdout);
-            fflush(stderr);
-            if (tflag || !sim->graphss || sim->graphss->graphics == 0) {
-                er = smolsimulate(sim);
-                endsimulate(sim, er);
-            } else {
-                smolsimulategl(sim);
-            }
-#else
-            //
-            // ImGui method
-            //
-            er = win.simulate(sim);
-#endif
-        }
-        simfree(sim);
-        simfuncfree();
+    if (pflag || er) {
+        simLog(sim, 4, "%sSimulation skipped\n", er ? "\n" : "");
+        fflush(stdout);
+        fflush(stderr);
+        return 0;
     }
 
-    catch (const char* errmsg) {
-        fprintf(stderr, "%s\n", errmsg);
-        exitCode = 1;
-    } catch (...) {
-        fprintf(stderr, "unknown error\n");
-        exitCode = 1;
-    }
+    smoldyn::Window win(sim);
+    er = win.simulate();
 
-    return exitCode;
+    // All done.
+    simfree(sim);
+    simfuncfree();
+
+    return 0;
 }

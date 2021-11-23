@@ -32,26 +32,37 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Window::Window(const char* name)
-    : matrix_ { 0.f }
-    , name_(name)
-    , initialized_(false)
+Window::Window(simptr sim)
+    : sim_(sim)
+    , paused_(false)
+    , matrix_ { 0.f }
     , frame_rate_(20.0f)
     , canvas_({ 720.f, 480.f, 480.f })
 {
-    glGetFloatv(GL_MODELVIEW_MATRIX, matrix_.data());
+    // Window doesn't own sim_
 }
 
 Window::~Window()
 {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    if (ImGui::GetCurrentContext() && isOpenGLEnabled())
+        ImGui::DestroyContext();
 
-    if (window_) {
+    if (window_ && isOpenGLEnabled()) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
+}
+
+/**
+ * Returns 'true' if opengl is enabled, 'false' otherwise.
+ */
+bool Window::isOpenGLEnabled() const
+{
+    if (!sim_)
+        return false;
+    return (0 != sim_->graphss->graphics);
 }
 
 /* changeSize */
@@ -222,13 +233,13 @@ void Window::renderSim()
     return;
 }
 
-int Window::init()
+int Window::initGLFW()
 {
-    if (initialized_) {
-        fprintf(stderr, "Already initialized.");
-        return 1;
-    }
+    // do nothing when 'graphics none' is set.
+    if (!isOpenGLEnabled())
+        return 0;
 
+    // Else add callback.
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
         fprintf(stderr, "Failed to init GLFW windows.");
@@ -263,7 +274,6 @@ int Window::init()
 
     if (window_ == nullptr) {
         fprintf(stderr, "Failed to create main window.\n");
-        initialized_ = false;
         return 1;
     }
 
@@ -278,7 +288,6 @@ int Window::init()
 
     if (err) {
         fprintf(stderr, "Failed to initialize OpenGL loaded!\n");
-        initialized_ = false;
         return 1;
     }
 
@@ -302,7 +311,6 @@ int Window::init()
     io.DisplaySize = ImVec2(canvas_[0], canvas_[1]);
     io.DeltaTime = 1.0f / frame_rate_;
 
-    initialized_ = true;
     return 0;
 }
 
@@ -319,29 +327,34 @@ int Window::graphicsUpdate()
     return 0;
 }
 
-int Window::simulate(simptr sim)
+/**
+ * Simulate: return '0' on success.
+ */
+int Window::simulate()
 {
+    initGLFW(); // GLFW Window
+
     int er;
-    sim_ = sim;
-
     simLog(sim_, 2, "Simulating\n");
-
     sim_->clockstt = time(NULL);
+
     er = simdocommands(sim_);
+    if (er)
+        return 1;
 
-    if (!er) {
-        while ((er = simulatetimestep(sim_)) == 0) {
-            if (!paused_) {
-                graphicsUpdate();
-                nframe_ += 1;
-                sim_->elapsedtime += difftime(time(NULL), sim_->clockstt);
-            } else
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-            renderScene();
+    while ((er = simulatetimestep(sim_)) == 0) {
+        if (!paused_) {
+            graphicsUpdate();
+            nframe_ += 1;
+            sim_->elapsedtime += difftime(time(NULL), sim_->clockstt);
+        } else {
+            fprintf(stdout, "Paused.\n");
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
+
+        renderScene();
     }
-    return er;
+    return 0;
 }
 
 void Window::updateCanvasSize()

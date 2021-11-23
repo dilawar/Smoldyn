@@ -54,19 +54,17 @@ namespace smoldyn {
 class Window {
 
 public:
-    Window(const char* name);
+    Window(simptr sim);
     ~Window();
 
     inline GLFWwindow* ref() const { return window_; }
 
     int graphicsUpdate();
-
-    int simulate(simptr sim);
-
     int renderScene();
 
-    int init();
-    int clear();
+    bool isOpenGLEnabled() const;
+
+    int initGLFW();
 
     void changeSize();
     void renderSim();
@@ -76,8 +74,12 @@ public:
 
     void updateCanvasSize();
 
-    int writeTIFF(
-        const char* filename, const char* description, int compression);
+    int writeTIFF(const char* filename, const char* desc, int compression);
+
+    /**
+     * Simulate
+     */
+    int simulate();
 
     /**
      * Get the graphics type. Scaling functions uses this information.
@@ -113,7 +115,8 @@ public:
     }
 
 protected:
-    bool paused_ = false;
+    simstruct* sim_;
+    bool paused_;
 
     char snapshotName_[120] = "OpenGL00000.tif";
     size_t numSnapshots_ = 0;
@@ -125,10 +128,6 @@ protected:
     std::array<float, 16> matrix_;
 
 private:
-    /* data */
-    const char* name_;
-    simstruct* sim_;
-
     GLFWwindow* window_;
     int error_code_;
 
