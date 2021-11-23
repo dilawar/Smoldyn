@@ -441,16 +441,16 @@ int Window::renderScene()
     // Rotation.
     //
     if (dim == 3) {
-        ImGui::SliderAngle("Rot X", &angles_[0], -180.f, 180.f);
-        ImGui::SliderAngle("Rot Y", &angles_[1], -180.f, 180.f);
-        ImGui::SliderAngle("Rot Z", &angles_[2], -180.f, 180.f);
+        ImGui::SliderAngle("Rot X", &angles_[0], -90.f, 90.f);
+        ImGui::SliderAngle("Rot Y", &angles_[1], -90.f, 90.f);
+        ImGui::SliderAngle("Rot Z", &angles_[2], -90.f, 90.f);
         ImGui::Separator();
     }
 
     //
     // View / FoV etc.
     //
-    ImGui::SliderInt("Zoom", &gui::gGraphicsParam_.Zoom, 1, 10);
+    ImGui::SliderFloat("Zoom", &gui::gGraphicsParam_.Zoom, 1.0f, 4.0f);
     ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, -180.f, 180.f);
     ImGui::Separator();
 

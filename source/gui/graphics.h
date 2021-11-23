@@ -22,7 +22,7 @@ namespace gui {
  * Structure to keep graphics related parameters.
  */
 struct GraphicsParam {
-    size_t Dimension = 3;
+    size_t Dimension = 0;
 
     float ClipSize = 1.0f;
 
@@ -37,16 +37,17 @@ struct GraphicsParam {
     float ClipFront = 0.f;
     float ClipBack = 0.f;
 
-    int Zoom = 1;
-    float FieldOfView = 45.f;
-    float Aspect = 1.0;
+    float Zoom = 1.0f;
+    float FieldOfView = 10.f;
+    float Aspect = 1.0f;
 
-    size_t PixWide = 0, PixHigh = 0;
+    float PixWide = 0.f, PixHigh = 0.f;
 
     int Fix2DAspect = 0;
 
-    int Xtrans = 0, Ytrans = 0;
-    int Near = 0;
+    float Xtrans = 0.f, Ytrans = 0.f;
+    float Near = 0.f;
+
     int Gl2PauseState = 0;
 
 #if 0

@@ -93,26 +93,9 @@ public:
     inline bool isArenaNormalized() const { return false; }
 
     /**
-     * Convert a double* to ImVec2
+     * Rotate
      */
-    template <typename T = double>
-    inline ImVec2 toImVec2(T* const pos, size_t dim)
-    {
-        if (dim == 1)
-            return ImVec2(X(pos[0]), canvas_[1] / 2);
-
-        if (dim == 2)
-            return ImVec2(X(pos[0]), Y(pos[1]));
-
-        auto f = 5;
-        if (dim == 3) {
-            // 3d to 2d projection.
-            return ImVec2(
-                X(f * pos[0] / (1 + pos[2])), Y(f * pos[1] / (1 + pos[2])));
-        }
-        fmt::print(stderr, "We should not be here: dim={}", dim);
-        return ImVec2();
-    }
+    void rotate();
 
 protected:
     simstruct* sim_;

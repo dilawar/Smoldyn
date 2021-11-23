@@ -26,8 +26,6 @@ using namespace std;
 
 #include "graphics.h"
 
-constexpr double PI = 3.14159265358979323846;
-
 namespace gui {
 
 // global graphics structure.
@@ -555,16 +553,16 @@ void RenderSurfaces(simptr sim)
                 for (p = 0; p < srf->npanel[4]; p++) { // 2-D hemispheres front
                     point = srf->panels[4][p]->point;
                     front = srf->panels[4][p]->front;
-                    theta = atan2(point[2][1], point[2][0]) + PI / 2.0;
+                    theta = atan2(point[2][1], point[2][0]) + M_PI / 2.0;
                     if (fdrawmode & DMvert)
-                        gl2DrawArcD(point[0], point[1][0], theta, theta + PI,
+                        gl2DrawArcD(point[0], point[1][0], theta, theta + M_PI,
                             (int)point[1][1], 'v', 2);
                     if (fdrawmode & DMface)
-                        gl2DrawArcD(point[0], point[1][0], theta, theta + PI,
+                        gl2DrawArcD(point[0], point[1][0], theta, theta + M_PI,
                             (int)point[1][1], 'f', 2);
                     if (fdrawmode & DMedge)
                         gl2DrawArcD(point[0], point[1][0] + front[0] * deltax,
-                            theta, theta + PI, (int)point[1][1], 'e', 2);
+                            theta, theta + M_PI, (int)point[1][1], 'e', 2);
                 }
 
                 if (fdrawmode & DMedge || fdrawmode & DMface) {
@@ -660,11 +658,11 @@ void RenderSurfaces(simptr sim)
                          p++) { // 2-D hemispheres back
                         point = srf->panels[4][p]->point;
                         front = srf->panels[4][p]->front;
-                        theta = atan2(point[2][1], point[2][0]) + PI / 2.0;
+                        theta = atan2(point[2][1], point[2][0]) + M_PI / 2.0;
                         if (bdrawmode & DMedge)
                             gl2DrawArcD(point[0],
                                 point[1][0] + front[0] * deltax, theta,
-                                theta + PI, (int)point[1][1], 'e', 2);
+                                theta + M_PI, (int)point[1][1], 'e', 2);
                     }
                 }
             }
@@ -1098,7 +1096,6 @@ void RenderLattice(simptr sim)
     }
     return;
 }
-
 
 void Initialize(simptr sim)
 {
