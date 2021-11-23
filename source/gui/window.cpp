@@ -33,11 +33,13 @@ static void glfw_error_callback(int error, const char* description)
 }
 
 Window::Window(const char* name)
-    : name_(name)
+    : matrix_ { 0.f }
+    , name_(name)
     , initialized_(false)
     , frame_rate_(20.0f)
     , canvas_({ 720.f, 480.f, 480.f })
 {
+    glGetFloatv(GL_MODELVIEW_MATRIX, matrix_.data());
 }
 
 Window::~Window()
@@ -50,6 +52,174 @@ Window::~Window()
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
+}
+
+/* changeSize */
+void Window::changeSize()
+{
+    const auto dim = sim_->dim;
+    float clipheight, clipwidth;
+    float nearold;
+
+    auto w = gui::gGraphicsParam_.CanvasWidth;
+    auto h = gui::gGraphicsParam_.CanvasHeight;
+
+    assert(w > 0);
+    assert(h > 0);
+
+    gui::gGraphicsParam_.PixWide = w;
+    gui::gGraphicsParam_.PixHigh = h;
+
+    if (h == 0)
+        h = 1;
+
+    gui::gGraphicsParam_.setViewPort();
+
+    if (gui::gGraphicsParam_.Dimension < 3
+        && gui::gGraphicsParam_.Fix2DAspect) {
+        if (w <= h) {
+            assert(gui::gGraphicsParam_.Zoom != 0);
+            clipheight = gui::gGraphicsParam_.ClipSize
+                / gui::gGraphicsParam_.Zoom * h / w;
+            clipwidth
+                = gui::gGraphicsParam_.ClipSize / gui::gGraphicsParam_.Zoom;
+        } else {
+            clipheight
+                = gui::gGraphicsParam_.ClipSize / gui::gGraphicsParam_.Zoom;
+            clipwidth = gui::gGraphicsParam_.ClipSize
+                / gui::gGraphicsParam_.Zoom * w / h;
+        }
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(gui::gGraphicsParam_.ClipLeft,
+            gui::gGraphicsParam_.ClipLeft + clipwidth,
+            gui::gGraphicsParam_.ClipBot,
+            gui::gGraphicsParam_.ClipBot + clipheight,
+            gui::gGraphicsParam_.ClipFront, gui::gGraphicsParam_.ClipBack);
+        glMatrixMode(GL_MODELVIEW);
+        // glLoadIdentity();
+    } else if (gui::gGraphicsParam_.Dimension < 3) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(gui::gGraphicsParam_.ClipLeft, gui::gGraphicsParam_.ClipRight,
+            gui::gGraphicsParam_.ClipBot, gui::gGraphicsParam_.ClipTop,
+            gui::gGraphicsParam_.ClipFront, gui::gGraphicsParam_.ClipBack);
+        glMatrixMode(GL_MODELVIEW);
+    } else {
+        gui::gGraphicsParam_.Aspect = 1.0 * w / h;
+
+        nearold = gui::gGraphicsParam_.Near;
+        if (w >= h)
+            gui::gGraphicsParam_.Near = gui::gGraphicsParam_.ClipSize / 2.0
+                / ::tan(gui::gGraphicsParam_.FieldOfView * M_PI / 180.0 / 2.0);
+        else
+            gui::gGraphicsParam_.Near = gui::gGraphicsParam_.ClipSize / 2.0
+                / tan(gui::gGraphicsParam_.FieldOfView
+                    * gui::gGraphicsParam_.Aspect * M_PI / 180.0 / 2.0);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(gui::gGraphicsParam_.FieldOfView,
+            gui::gGraphicsParam_.Aspect, gui::gGraphicsParam_.Near,
+            gui::gGraphicsParam_.ClipSize + gui::gGraphicsParam_.Near);
+
+        glMatrixMode(GL_MODELVIEW);
+        glGetFloatv(GL_MODELVIEW_MATRIX, matrix_.data());
+
+        // glLoadIdentity();
+        glTranslatef(0, 0, nearold - gui::gGraphicsParam_.Near);
+
+        //
+        // Rotation.
+        //
+        if (dim == 3) {
+            for (size_t i = 0; i < 3; ++i) {
+                float theta = 180.f * angles_[i] / M_PI;
+                if (i == 0)
+                    glRotatef(theta, 1.f, 0.f, 0.f);
+                else if (i == 1)
+                    glRotatef(theta, 0.f, 1.f, 0.f);
+                else
+                    glRotatef(theta, 0.f, 0.f, 1.f);
+            }
+        }
+
+        glMultMatrixf(matrix_.data());
+    }
+
+    return;
+}
+
+/**
+ * RenderSim
+ */
+void Window::renderSim()
+{
+    std::array<double, DIMMAX> pt1 = { 0.f }, pt2 = { 0.f };
+
+    auto graphss = sim_->graphss;
+    if (!graphss || graphss->graphics == 0)
+        return;
+
+    auto dim = sim_->dim;
+    auto wlist = sim_->wlist;
+
+    gui::Initialize(sim_);
+    gui::gGraphicsParam_.computeOpenGLSize();
+
+    changeSize();
+
+    if (dim == 3)
+        gui::RenderMolecs(sim_);
+
+    //
+    // Draw bounding box
+    //
+    if (graphss->framepts) {
+        pt1[0] = wlist[0]->pos;
+        pt2[0] = wlist[1]->pos;
+        pt1[1] = dim > 1 ? wlist[2]->pos : 0;
+        pt2[1] = dim > 1 ? wlist[3]->pos : 0;
+        pt1[2] = dim > 2 ? wlist[4]->pos : 0;
+        pt2[2] = dim > 2 ? wlist[5]->pos : 0;
+
+        // fmt::print("Drawing bounding box: {} {}: {} {}\n", graphss->framepts,
+        //     graphss->framecolor, pt1, pt2);
+
+        glColor4fv(&graphss->framecolor[0]);
+        glLineWidth((float)graphss->framepts);
+
+        gui::DrawBoxD(pt1.data(), pt2.data(), dim);
+    }
+
+    if (graphss->gridpts) {
+        pt1[0] = sim_->boxs->min[0];
+        pt2[0] = pt1[0] + sim_->boxs->size[0] * sim_->boxs->side[0];
+        pt1[1] = dim > 1 ? sim_->boxs->min[1] : 0;
+        pt2[1]
+            = dim > 1 ? pt1[1] + sim_->boxs->size[1] * sim_->boxs->side[1] : 0;
+        pt1[2] = dim > 2 ? sim_->boxs->min[2] : 0;
+        pt2[2]
+            = dim > 2 ? pt1[2] + sim_->boxs->size[2] * sim_->boxs->side[2] : 0;
+        glColor4fv(&graphss->gridcolor[0]);
+        if (dim == 1)
+            glPointSize((float)graphss->gridpts);
+        else
+            glLineWidth((float)graphss->gridpts);
+        gui::DrawGridD(pt1.data(), pt2.data(), sim_->boxs->side, dim);
+    }
+
+    if (dim < 3)
+        gui::RenderMolecs(sim_);
+
+    if (sim_->srfss)
+        gui::RenderSurfaces(sim_);
+    if (sim_->filss)
+        gui::RenderFilaments(sim_);
+    if (sim_->latticess)
+        gui::RenderLattice(sim_);
+
+    return;
 }
 
 int Window::init()
@@ -154,17 +324,17 @@ int Window::simulate(simptr sim)
     int er;
     sim_ = sim;
 
-    simLog(sim, 2, "Simulating\n");
+    simLog(sim_, 2, "Simulating\n");
 
     sim_->clockstt = time(NULL);
-    er = simdocommands(sim);
+    er = simdocommands(sim_);
 
     if (!er) {
-        while ((er = simulatetimestep(sim)) == 0) {
+        while ((er = simulatetimestep(sim_)) == 0) {
             if (!paused_) {
                 graphicsUpdate();
                 nframe_ += 1;
-                sim_->elapsedtime += difftime(time(NULL), sim->clockstt);
+                sim_->elapsedtime += difftime(time(NULL), sim_->clockstt);
             } else
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -283,30 +453,7 @@ int Window::renderScene()
 
     // Render the simulation.
     if (!paused_)
-        gui::RenderSim(sim_, this);
-
-    //
-    // Rotation.
-    //
-    if (dim == 3) {
-        for (size_t i = 0; i < 3; ++i) {
-            if (!approximatelyEqual(angles_[i], old_angles_[i], 0.1f)) {
-                glPushMatrix();
-                glMatrixMode(GL_MODELVIEW);
-                float theta = 180 * (angles_[i] - old_angles_[i]) / M_PI;
-                old_angles_[i] = angles_[i];
-                // printf(" rotating %f deg\n", theta);
-                // fflush(stdout);
-                if (i == 0)
-                    glRotatef(theta, 1.f, 0.f, 0.f);
-                else if (i == 1)
-                    glRotatef(theta, 0.f, 1.f, 0.f);
-                else
-                    glRotatef(theta, 0.f, 0.f, 1.f);
-                glPopMatrix();
-            }
-        }
-    }
+        renderSim();
 
     //
     // Render the window

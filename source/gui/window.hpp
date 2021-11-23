@@ -68,6 +68,9 @@ public:
     int init();
     int clear();
 
+    void changeSize();
+    void renderSim();
+
     static size_t getWidth();
     static size_t getHeight();
 
@@ -118,6 +121,9 @@ protected:
     std::array<float, 3> angles_ = { 0.f };
     std::array<float, 3> old_angles_ = { 0.f };
 
+    // camera view
+    std::array<float, 16> matrix_;
+
 private:
     /* data */
     const char* name_;
@@ -129,8 +135,8 @@ private:
     bool initialized_;
     float frame_rate_;
 
-    std::array<float, DIMMAX> canvas_; // Size of canvas. Usually 2x of arena_
-
+    // Size of canvas. Usually 2x of arena_
+    std::array<float, DIMMAX> canvas_;
     size_t nframe_ = 0;
 };
 

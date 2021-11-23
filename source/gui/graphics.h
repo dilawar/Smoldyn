@@ -91,11 +91,11 @@ extern GraphicsParam gGraphicsParam_;
 void RenderSurfaces(simptr sim);
 void RenderMolecs(simptr sim);
 void RenderSim(simptr sim, void* data);
+void RenderFilaments(simptr sim);
+void RenderLattice(simptr sim);
 
 void DrawBoxD(double* pt1, double* pt2, int dim);
 void DrawGridD(double* pt1, double* pt2, int* n, int dim);
-
-void ChangeSize();
 
 int GraphicsUpdate(simptr sim);
 
