@@ -416,8 +416,8 @@ PYBIND11_MODULE(_smoldyn, m)
       .def("connect", &Simulation::connect)
 
       // utility functions.
-      .def(
-        "getSimPtr", &Simulation::getSimPtr, py::return_value_policy::reference_internal)
+      .def("getSimPtr", &Simulation::getSimPtr, py::return_value_policy::reference)
+
       .def_property_readonly(
         "simptr", &Simulation::getSimPtr, py::return_value_policy::reference_internal)
 
