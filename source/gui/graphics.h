@@ -103,6 +103,14 @@ int GraphicsUpdate(simptr sim);
 void Initialize(simptr sim);
 
 /**
+ * Convert radian to degress.
+ */
+template <typename T = float> inline T rad2deg(const T rad)
+{
+    return 180.f * rad / M_PI;
+}
+
+/**
  * Compute various parameters for the GUI.
  */
 template <typename T = float>

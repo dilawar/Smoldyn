@@ -140,25 +140,51 @@ void Window::changeSize()
         // glLoadIdentity();
         glTranslatef(0, 0, nearold - gui::gGraphicsParam_.Near);
 
-        //
-        // Rotation.
-        //
-        if (dim == 3) {
-            for (size_t i = 0; i < 3; ++i) {
-                float theta = 180.f * angles_[i] / M_PI;
-                if (i == 0)
-                    glRotatef(theta, 1.f, 0.f, 0.f);
-                else if (i == 1)
-                    glRotatef(theta, 0.f, 1.f, 0.f);
-                else
-                    glRotatef(theta, 0.f, 0.f, 1.f);
-            }
-        }
+        if (dim == 3)
+            rotateScene();
 
         glMultMatrixf(matrix_.data());
     }
 
     return;
+}
+
+/**
+ * Rotation of scene.
+ *
+ * There are two ways to rotate the scene.
+ *
+ * 1. Drag and rotate using mouse.
+ * 2. Using the sliders from gui.
+ *
+ * TODO: To make rotate efficient, unless there is a change in angle, we don't
+ * rotate.
+ */
+void Window::rotateScene()
+{
+    // Mouse drag.
+    const float r = 2000.0f;
+
+    const auto del = ImGui::GetMouseDragDelta();
+
+    angles_[0] += gui::rad2deg(del.x / r);
+    angles_[1] += gui::rad2deg(del.y / r);
+
+    // slider.
+    for (size_t i = 0; i < 3; ++i) {
+
+        angles_[i] = std::fmod(angles_[i], 180.f);
+
+        const float theta = angles_[i];
+        if (i == 0)
+            glRotatef(theta, 1.f, 0.f, 0.f);
+        else if (i == 1)
+            glRotatef(theta, 0.f, 1.f, 0.f);
+        else
+            glRotatef(theta, 0.f, 0.f, 1.f);
+
+        old_angles_[i] = angles_[i];
+    }
 }
 
 /**

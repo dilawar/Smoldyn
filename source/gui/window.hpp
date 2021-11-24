@@ -60,6 +60,7 @@ public:
     inline GLFWwindow* ref() const { return window_; }
 
     int graphicsUpdate();
+    void rotateScene();
     int renderScene();
 
     bool isOpenGLEnabled() const;
