@@ -25,7 +25,6 @@ fi
 
 $PYTHON -m pip install setuptools --upgrade
 $PYTHON -m pip install wheel --upgrade
-$PYTHON -m pip install conan --upgrade
 $PYTHON -m pip install numpy --upgrade
 $PYTHON -m pip install delocate --upgrade
 $PYTHON -m pip install twine  --upgrade

@@ -3,9 +3,7 @@ name: Release Mac OS
 on:
   push:
     branches:
-      - master
-      - conan
-      - devel
+      - '*'
     tags:
       - 'v**'
   pull_request:
