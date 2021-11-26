@@ -163,18 +163,15 @@ void Window::changeSize()
 void Window::rotateScene()
 {
     // Mouse drag.
-    const float r = 2000.0f;
-
+    const float r = (getHeight() + getWidth()) / 2.f;
     const auto del = ImGui::GetMouseDragDelta();
 
-    angles_[0] += gui::rad2deg(del.x / r);
-    angles_[1] += gui::rad2deg(del.y / r);
+    angles_[0] += gui::rad2deg(del.y / r); // xz plane
+    angles_[1] += gui::rad2deg(del.x / r); // yz plane
 
     // slider.
     for (size_t i = 0; i < 3; ++i) {
-
         angles_[i] = std::fmod(angles_[i], 180.f);
-
         const float theta = angles_[i];
         if (i == 0)
             glRotatef(theta, 1.f, 0.f, 0.f);
@@ -182,8 +179,6 @@ void Window::rotateScene()
             glRotatef(theta, 0.f, 1.f, 0.f);
         else
             glRotatef(theta, 0.f, 0.f, 1.f);
-
-        old_angles_[i] = angles_[i];
     }
 }
 
@@ -220,12 +215,8 @@ void Window::renderSim()
         pt1[2] = dim > 2 ? wlist[4]->pos : 0;
         pt2[2] = dim > 2 ? wlist[5]->pos : 0;
 
-        // fmt::print("Drawing bounding box: {} {}: {} {}\n", graphss->framepts,
-        //     graphss->framecolor, pt1, pt2);
-
         glColor4fv(&graphss->framecolor[0]);
         glLineWidth((float)graphss->framepts);
-
         gui::DrawBoxD(pt1.data(), pt2.data(), dim);
     }
 
@@ -238,6 +229,7 @@ void Window::renderSim()
         pt1[2] = dim > 2 ? sim_->boxs->min[2] : 0;
         pt2[2]
             = dim > 2 ? pt1[2] + sim_->boxs->size[2] * sim_->boxs->side[2] : 0;
+
         glColor4fv(&graphss->gridcolor[0]);
         if (dim == 1)
             glPointSize((float)graphss->gridpts);
@@ -255,6 +247,8 @@ void Window::renderSim()
         gui::RenderFilaments(sim_);
     if (sim_->latticess)
         gui::RenderLattice(sim_);
+
+    // TODO: RenderText
 
     return;
 }
@@ -463,6 +457,7 @@ int Window::renderScene()
     }
     ImGui::Separator();
 
+#if 0
     //
     // Rotation.
     //
@@ -472,6 +467,7 @@ int Window::renderScene()
         ImGui::SliderAngle("Rot Z", &angles_[2], -90.f, 90.f);
         ImGui::Separator();
     }
+#endif
 
     //
     // View / FoV etc.

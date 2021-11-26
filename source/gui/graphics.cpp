@@ -956,33 +956,33 @@ void RenderFilaments(simptr sim)
 /* RenderMolecs */
 void RenderMolecs(simptr sim)
 {
-    molssptr mols;
     moleculeptr mptr;
-    int ll, m, i, dim;
-    double ymid, zmid;
+    int ll, m, i;
     enum MolecState ms;
-    GLfloat whitecolor[] = { 1, 1, 1, 1 };
-    GLfloat glf1[4];
 
-    dim = sim->dim;
-    mols = sim->mols;
+    std::array<float, 4> whitecolor = { 1, 1, 1, 1 };
+    std::array<float, 4> glf1;
+
+    const auto dim = sim->dim;
+
+    auto mols = sim->mols;
     if (!mols)
         return;
 
-    ymid = gGraphicsParam_.ClipMidy;
-    zmid = gGraphicsParam_.ClipMidz;
+    const auto ymid = gGraphicsParam_.ClipMidy;
+    const auto zmid = gGraphicsParam_.ClipMidz;
 
     if (sim->graphss->graphics == 1) {
-        for (ll = 0; ll < sim->mols->nlist; ll++)
-            if (sim->mols->listtype[ll] == MLTsystem)
+        for (ll = 0; ll < sim->mols->nlist; ll++) {
+            if (sim->mols->listtype[ll] == MLTsystem) {
                 for (m = 0; m < mols->nl[ll]; m++) {
                     mptr = mols->live[ll][m];
                     i = mptr->ident;
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
                         glPointSize((GLfloat)mols->display[i][ms]);
-                        glColor3fv(
-                            ConvertTo<float>(mols->color[i][ms], glf1, 3));
+                        glColor3fv(ConvertTo<float>(
+                            mols->color[i][ms], glf1.data(), 3));
                         glBegin(GL_POINTS);
                         if (dim == 1)
                             glVertex3d((GLdouble)mptr->pos[0], (GLdouble)ymid,
@@ -991,17 +991,19 @@ void RenderMolecs(simptr sim)
                             glVertex3d((GLdouble)(mptr->pos[0]),
                                 (GLdouble)(mptr->pos[1]), (GLdouble)zmid);
                         else
-                            glVertex3fv(ConvertTo<float>(mptr->pos, glf1, 3));
+                            glVertex3fv(ConvertTo<float>(mptr->pos, glf1.data(), 3));
                         glEnd();
                     }
                 }
+            }
+        }
     }
 
     else if (sim->graphss->graphics >= 2) {
         glMatrixMode(GL_MODELVIEW);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         if (sim->graphss->graphics >= 3) {
-            glMaterialfv(GL_FRONT, GL_SPECULAR, whitecolor);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, whitecolor.data());
             glMateriali(GL_FRONT, GL_SHININESS, 30);
         }
         for (ll = 0; ll < sim->mols->nlist; ll++) {
@@ -1012,7 +1014,7 @@ void RenderMolecs(simptr sim)
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
                         glColor3fv(
-                            ConvertTo<float>(mols->color[i][ms], glf1, 3));
+                            ConvertTo<float>(mols->color[i][ms], glf1.data(), 3));
                         glPushMatrix();
                         if (dim == 1)
                             glTranslated((GLdouble)(mptr->pos[0]),
