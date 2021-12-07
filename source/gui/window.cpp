@@ -164,7 +164,9 @@ void Window::rotateScene()
 {
     // Mouse drag.
     const float r = (getHeight() + getWidth()) / 2.f;
+
     const auto del = ImGui::GetMouseDragDelta();
+    // fmt::print(stdout, "del dx={} dy={}\n", del.x, del.y);
 
     angles_[0] += gui::rad2deg(del.y / r); // xz plane
     angles_[1] += gui::rad2deg(del.x / r); // yz plane
@@ -180,6 +182,7 @@ void Window::rotateScene()
         else
             glRotatef(theta, 0.f, 0.f, 1.f);
     }
+    ImGui::ResetMouseDragDelta();
 }
 
 /**

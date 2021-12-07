@@ -991,7 +991,8 @@ void RenderMolecs(simptr sim)
                             glVertex3d((GLdouble)(mptr->pos[0]),
                                 (GLdouble)(mptr->pos[1]), (GLdouble)zmid);
                         else
-                            glVertex3fv(ConvertTo<float>(mptr->pos, glf1.data(), 3));
+                            glVertex3fv(
+                                ConvertTo<float>(mptr->pos, glf1.data(), 3));
                         glEnd();
                     }
                 }
@@ -1013,8 +1014,8 @@ void RenderMolecs(simptr sim)
                     i = mptr->ident;
                     ms = mptr->mstate;
                     if (mols->display[i][ms] > 0) {
-                        glColor3fv(
-                            ConvertTo<float>(mols->color[i][ms], glf1.data(), 3));
+                        glColor3fv(ConvertTo<float>(
+                            mols->color[i][ms], glf1.data(), 3));
                         glPushMatrix();
                         if (dim == 1)
                             glTranslated((GLdouble)(mptr->pos[0]),
