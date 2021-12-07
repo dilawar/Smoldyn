@@ -38,7 +38,7 @@ struct GraphicsParam {
     float ClipBack = 0.f;
 
     float Zoom = 1.0f;
-    float FieldOfView = 10.f;
+    float FieldOfView = 45.f;
     float Aspect = 1.0f;
 
     float PixWide = 0.f, PixHigh = 0.f;

@@ -473,10 +473,15 @@ int Window::renderScene()
 #endif
 
     //
-    // View / FoV etc.
+    // Zoom
+    // FIXME: Not working. May be I need a callback here.
     //
     ImGui::SliderFloat("Zoom", &gui::gGraphicsParam_.Zoom, 1.0f, 4.0f);
-    ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, -180.f, 180.f);
+
+    //
+    // View / FoV etc.
+    //
+    ImGui::SliderFloat("FoV", &gui::gGraphicsParam_.FieldOfView, 0.f, 180.f);
     ImGui::Separator();
 
     ImGui::ColorEdit4("Bg Color", sim_->graphss->backcolor);
