@@ -7,3 +7,9 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cxx = { version = "1.0.110", features = ["c++17"] }
+
+[build-dependencies]
+anyhow = "1.0.75"
+glob = "0.3.1"
+cxx-build = "1.0.110"
