@@ -24,6 +24,10 @@
   #include "nsvc.h"
 #endif
 
+#ifdef OPTION_VCELL
+#include <sstream>
+#endif
+
 #include "smoldyn.h"
 #include "smoldynfuncs.h"
 
@@ -2559,9 +2563,8 @@ int rxnparsereaction(simptr sim,const char *word,char *line2,char *errstr) {
 	if(line2) {
 #ifdef OPTION_VCELL
 		CHECKS(rxn,"wildcards and species groups are not supported in reactions in VCell");
-		using std::stringstream;
 		string rawStr, expStr;
-		stringstream ss(line2);
+		std::stringstream ss(line2);
 		getline(ss,rawStr);
 		size_t found = rawStr.find(";");
 		if(found!=string::npos) {
@@ -2577,10 +2580,9 @@ int rxnparsereaction(simptr sim,const char *word,char *line2,char *errstr) {
 			//if rate is a exp, a "fake" set value has to be set to allow RxnSetRate to do proper job, especially when there
 			//is reversible reactions, the rxn->rparamt, and rxn->bindrad2 have to be set.
 			er = RxnSetValue(sim, "rate", rxn, constRate);
-			line2=NULL; }
-		else
+			line2=NULL;
 #endif
-		{
+        } else {
 			itct=strmathsscanf(line2,"%mlg",varnames,varvalues,nvar,&flt1);
 			CHECKS(itct==1,"failed to read reaction rate");
 			if(!isrule) {
@@ -3259,5 +3261,3 @@ int bireact(simptr sim,int neigh) {
 												b2=bmax; }}}}}}}
 
 	return 0; }
-
-

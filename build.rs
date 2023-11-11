@@ -35,9 +35,11 @@ fn main() -> anyhow::Result<()> {
     build
         .flag("-std=c++14")
         .flag_if_supported("-std=c++17")
-        .flag_if_supported("-Wall")
+        .cpp(true)
+        // .flag_if_supported("-Wall")
         .files(src_files)
         .define("BNG2_PATH", bng2_path().as_deref())
+        .define("OPTION_VCELL", "ON")
         .include(&format!("{LIBSTEVE_SRC}"))
         .include(&format!("{SMOLDYN_SRC}"))
         .include(".");

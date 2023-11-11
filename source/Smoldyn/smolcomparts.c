@@ -18,7 +18,9 @@
 #include "smoldynfuncs.h"
 
 #ifdef OPTION_VCELL
+
 	#include <algorithm>
+
 	using std::max;
 	using std::min;
 	#include <fstream>
@@ -27,7 +29,8 @@
 	#include <iostream>
 
 	extern "C" {
-		#include "zlib.h" }
+		#include "zlib.h" 
+    }
 #endif
 
 
@@ -122,13 +125,13 @@ int posincompart(simptr sim,double *pos,compartptr cmpt,int useoldpos) {
 	surfaceptr srf;
 	double crsspt[DIMMAX];
 	enum CmptLogic sym;
-	
+
 #ifdef OPTION_VCELL
 	int dim;
 	VolumeSamples* volumeSamplePtr;
 	const int numNeighbors =3;
 	int sampleIdxNeighbors[DIMMAX][numNeighbors];
-	
+
 	incmpt = 0;
 	int sameResultCount = 0;
 
@@ -137,7 +140,7 @@ int posincompart(simptr sim,double *pos,compartptr cmpt,int useoldpos) {
 		volumeSamplePtr = sim->volumeSamplesPtr;
 		dim = sim->dim;
 		unsigned char cmptID = getCompartmentID(cmpt->cname, sim->volumeSamplesPtr);
-		
+
 		for (int idim = 0; idim < dim; idim ++) {
 			double h = volumeSamplePtr->size[idim]/volumeSamplePtr->num[idim];
 			int idx = (int)floor((pos[idim] - volumeSamplePtr->origin[idim])/h);
@@ -237,7 +240,7 @@ unsigned char fromHex(const char* src) {
 /* loadHighResVolumeSamples */
 int loadHighResVolumeSamples(simptr sim,ParseFilePtr *pfpptr,char *line2) {		//?? needs to be added to user manual
 	char errstring[STRCHAR];
-	
+
 	char word[STRCHAR];
 	ParseFilePtr pfp = *pfpptr;
 	int pfpcode;
@@ -251,7 +254,7 @@ int loadHighResVolumeSamples(simptr sim,ParseFilePtr *pfpptr,char *line2) {		//?
 	string pixelLine;
 	while(!done) {
 		pfpcode=Parse_ReadLine(&pfp,word,&line2,errstring);
-		
+
 		*pfpptr=pfp;
 		CHECKS(pfpcode!=3,"%s",errstring);
 
@@ -285,7 +288,7 @@ int loadHighResVolumeSamples(simptr sim,ParseFilePtr *pfpptr,char *line2) {		//?
 				}
 			} else if (!strcmp(word, "VolumeSamples")) {
 				istringstream lineInput(line2);
-				lineInput >> volumeSamplesPtr->num[0] >> volumeSamplesPtr->num[1] >> volumeSamplesPtr->num[2];				
+				lineInput >> volumeSamplesPtr->num[0] >> volumeSamplesPtr->num[1] >> volumeSamplesPtr->num[2];
 			} else {//volume sample data  with no token in front
 				pixelLine += word;
 			}
@@ -337,7 +340,7 @@ int loadHighResVolumeSamples(simptr sim,ParseFilePtr *pfpptr,char *line2) {		//?
 		throw "loadHighResVolumeSamples : unexpected number of volume samples";
 	}
 	//for debug purpose
-	/*for (unsigned long i = 0; i < inflated_len; i ++) {		
+	/*for (unsigned long i = 0; i < inflated_len; i ++) {
 		if (volumeSamplesPtr->volsamples[i] == 6) {
 			cout << "volume sample  at " << i<< " is " << ((int)volumeSamplesPtr->volsamples[i])<< endl;
 		}
@@ -346,7 +349,7 @@ int loadHighResVolumeSamples(simptr sim,ParseFilePtr *pfpptr,char *line2) {		//?
 		}
 	}*/
 	return 0;
-	
+
 #else
 	throw "loadHighResVolumeSamples : function unavailable because compile does not include zlib";
 #endif
@@ -796,7 +799,7 @@ int compartupdatebox_volumeSample(simptr sim,compartptr cmpt,boxptr bptr,double 
 	for(bc=0;bc<cmpt->nbox && cmpt->boxlist[bc]!=bptr;bc++);	// check for box already in cmpt
 	if(bc<cmpt->nbox && volfrac==-2) return 0;				// box is listed and volume ok, so return
 
-	if(volfrac>1) volfrac2=1; 
+	if(volfrac>1) volfrac2=1;
 	else volfrac2=volfrac; //the actual volume faction
 
 	if(volfrac2==0) {
@@ -1059,17 +1062,17 @@ int compartsupdateparams_volumeSample(simptr sim) {					//VCELL
 	double sampleDx = volumeSample->size[0]/volumeSample->num[0];
 
 	int inbox,p,s;
-	
+
 	surfaceptr srf;
 	double pos[DIMMAX];
 	for(c=0;c<cmptss->ncmpt;c++) {
 		compartptr cmpt=cmptss->cmptlist[c];
 		cmpt->nbox=0;
 		unsigned char cmptID = getCompartmentID(cmpt->cname, sim->volumeSamplesPtr);
-		
+
 		for(b=0;b<boxs->nbox;b++) {											// find boxes that are in the compartment
 			boxptr bptr=boxs->blist[b];
-			
+
 			inbox=0;
 			for(p=0;p<bptr->npanel && !inbox;p++) {
 				srf=bptr->panel[p]->srf;
@@ -1091,7 +1094,7 @@ int compartsupdateparams_volumeSample(simptr sim) {					//VCELL
 				boxLow[d] = min[d]+size[d]*bptr->indx[d];
 				boxHigh[d] = min[d]+size[d]*(bptr->indx[d]+1);
 			}
-			
+
 			//initialize varibles used for each box
 			double insideCmptVol = 0;
 
@@ -1133,7 +1136,7 @@ int compartsupdateparams_volumeSample(simptr sim) {					//VCELL
 			}
 			double boxVolfrac = insideCmptVol/((boxs->size[0])*(boxs->size[1])*(boxs->size[2]));
 			if(boxVolfrac <= 1e-8) boxVolfrac = 0; // volume fraction is too small, consider it as 0
-			if((boxVolfrac + 1e-8) >= 1) boxVolfrac = 1; //if volume fraction is almost 1, consider it as 1 
+			if((boxVolfrac + 1e-8) >= 1) boxVolfrac = 1; //if volume fraction is almost 1, consider it as 1
 			if(boxVolfrac > 0)
 			{
 				int errorCode = compartupdatebox_volumeSample(sim,cmpt,bptr,boxVolfrac);
@@ -1178,7 +1181,7 @@ int compartsupdateparams_volumeSample(simptr sim) {					//VCELL
 	//	filestr.close();
 	//}
 
-	return 0; 
+	return 0;
 }
 #endif
 
@@ -1278,5 +1281,3 @@ void comparttranslate(simptr sim,compartptr cmpt,int code,double *translate) {
 											}}}}}}}}
 	sim->mols->touch++;
 	return; }
-
-
