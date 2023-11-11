@@ -14,7 +14,23 @@ fn main() -> anyhow::Result<()> {
         src_files.push(src_file);
     }
 
+    for src_file in glob::glob(&format!("source/vcell/*.cpp"))?
+        .into_iter()
+        .flatten()
+    {
+        println!("cargo:rerun-if-changed={}", src_file.display());
+        src_files.push(src_file);
+    }
+
     for src_file in glob::glob(&format!("{SMOLDYN_SRC}/*.c"))?
+        .into_iter()
+        .flatten()
+    {
+        println!("cargo:rerun-if-changed={}", src_file.display());
+        src_files.push(src_file);
+    }
+
+    for src_file in glob::glob(&format!("{SMOLDYN_SRC}/*.cpp"))?
         .into_iter()
         .flatten()
     {
@@ -44,6 +60,7 @@ fn main() -> anyhow::Result<()> {
         .define("OPTION_VCELL", "ON")
         .include(&format!("{LIBSTEVE_SRC}"))
         .include(&format!("{SMOLDYN_SRC}"))
+        .include("source/vcell")
         .include(".");
     build.compile("smoldyn");
 
