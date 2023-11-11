@@ -7,3 +7,8 @@ log
 
 .coverage
 htmlcov/
+
+
+# Added by cargo
+
+/target
