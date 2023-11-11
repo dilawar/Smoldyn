@@ -5250,11 +5250,11 @@ surfreadstring(simptr sim,
         if (found != string::npos) {
             if (constRate) {
                 if (!strcmp(word, "rate"))
-                    er = surfsetrate(srf, i, ms, ms1, ms2, i3, f1, 1);
+                    er = surfsetrate(srf, i, index, ms, ms1, ms2, i3, f1, 1);
                 else {
                     CHECKS(f1 <= 1,
                       "surface interaction probabilities cannot be greater than 1");
-                    er = surfsetrate(srf, i, ms, ms1, ms2, i3, f1, 2);
+                    er = surfsetrate(srf, i, index, ms, ms1, ms2, i3, f1, 2);
                 }
                 CHECKS(er != -1, "out of memory");
                 CHECKS(!er, "BUG: error in surfsetrate");
@@ -7418,8 +7418,8 @@ dosurfinteract(simptr sim,
             mptr->pnl = mptr->pnlx;
             done = 1;
         }
-        //			fixpt2panel(mptr->pos,pnl,dim,face,0); }		// old
-        //version, up to 2.50; line can be deleted
+        //			fixpt2panel(mptr->pos,pnl,dim,face,0); }		//
+        //old version, up to 2.50; line can be deleted
         if (i2 != i)
             molchangeident(sim, mptr, ll, m, i2, ms, mptr->pnl);
     }
