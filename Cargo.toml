@@ -13,3 +13,4 @@ cxx = { version = "1.0.110", features = ["c++17"] }
 anyhow = "1.0.75"
 glob = "0.3.1"
 cxx-build = "1.0.110"
+cc = "1.0.83"
