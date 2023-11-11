@@ -5222,8 +5222,10 @@ surfreadstring(simptr sim,
         }
 #ifdef OPTION_VCELL
         if (found != string::npos) {
-            if (constRate == true)
+            if (constRate == true) {
                 CHECKS(f1 >= 0, "negative surface rate values are not permitted");
+            }
+
             string name = rawStr.substr(
               found + 2); // after the ";" denoting the end of rate, the found move one
                           // more position(the space) to get to the end of the line, which
@@ -5231,7 +5233,8 @@ surfreadstring(simptr sim,
             char* tempLine = new char[name.size() + 1];
             strcpy(tempLine, name.c_str());
             line2 = tempLine;
-        } else
+        }
+        else
 #endif
         {
             CHECKS(f1 >= 0, "negative surface rate values are not permitted");
@@ -5286,8 +5289,8 @@ surfreadstring(simptr sim,
         CHECKS(!line2, "unexpected text at end of line");
     }
 
-    else if (!strcmp(word, "rate_rule") ||
-             !strcmp(word, "rate_internal_rule")) { // rate_rule, rate_internal_rule
+    else if (!strcmp(word, "rate_rule") || !strcmp(word, "rate_internal_rule")) {
+        // rate_rule, rate_internal_rule
         CHECKS(srf, "need to enter surface name first");
         itct = strmathsscanf(
           line2, "%s %s %s %mlg", varnames, varvalues, nvar, nm, nm1, nm2, &f1);
@@ -7419,7 +7422,7 @@ dosurfinteract(simptr sim,
             done = 1;
         }
         //			fixpt2panel(mptr->pos,pnl,dim,face,0); }		//
-        //old version, up to 2.50; line can be deleted
+        // old version, up to 2.50; line can be deleted
         if (i2 != i)
             molchangeident(sim, mptr, ll, m, i2, ms, mptr->pnl);
     }
