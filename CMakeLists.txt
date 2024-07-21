@@ -473,6 +473,14 @@ if(OPTION_VTK)
     list(APPEND DEP_LIBS ${VTK_LIBRARIES})
 endif()
 
+####### Build Rust targets ##############
+set(RUST_LIBSTEVE ${CMAKE_CURRENT_SOURCE_DIR}/steve/target/release/libsteve.a)
+add_custom_command(OUTPUT ${RUST_LIBSTEVE}
+    COMMAND cargo build --release
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/steve
+    COMMENT "Building steve (rust)"
+)
+
 
 ####### Targets ##########
 add_subdirectory(source/libSteve)
@@ -485,6 +493,7 @@ add_library(smoldyn_static STATIC ${SRC_FILES}
 
 set_property(TARGET smoldyn_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(smoldyn_static PUBLIC ${DEP_LIBS})
+target_link_libraries(smoldyn_static PUBLIC ${RUST_LIBSTEVE})
 set_target_properties(smoldyn_static PROPERTIES PREFIX "lib")
 
 if (OPTION_TARGET_LIBSMOLDYN)
@@ -558,4 +567,3 @@ enable_testing()
 if (OPTION_TARGET_LIBSMOLDYN AND OPTION_EXAMPLES)
     add_subdirectory(examples)
 endif ()
-
