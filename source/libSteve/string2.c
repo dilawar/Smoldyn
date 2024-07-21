@@ -37,16 +37,6 @@ int allocresults(char ***resultsptr,int *maxrptr,int nchar);
 /******************************************************************/
 
 
-/* strisnumber */
-int strisnumber(const char *str) {
-  char *ptr;
-  int len;
-
-  if(!(len=strlen(str))) return 0;
-  strtod(str,&ptr);
-  return(ptr==str+len); }
-
-
 /* strokname */
 int strokname(const char *name) {
 	int ok;
@@ -73,7 +63,7 @@ int strhasname(const char *string,const char *name) {
 /* strbegin */
 int strbegin(const char *strshort,const char *strlong,int casesensitive) {
 	int i;
-	
+
 	i=0;
 	if(casesensitive)
 		while(strshort[i]!='\0' && strshort[i]==strlong[i]) i++;
@@ -86,7 +76,7 @@ int strbegin(const char *strshort,const char *strlong,int casesensitive) {
 /* strsymbolcount */
 int strsymbolcount(const char *s,char c) {
 	int n;
-	
+
 	n=0;
 	for(;*s;s++)
 		if(*s==c) n++;
@@ -139,7 +129,7 @@ char *strrpbrk(char *cs,const char *ct) {
 /* StrChrQuote */
 char *StrChrQuote(char *cs,char c) {
 	int qt;
-	
+
 	qt=0;
 	for(;*cs;cs++)	{
 		if(*cs=='"')	qt=!qt;
@@ -150,7 +140,7 @@ char *StrChrQuote(char *cs,char c) {
 /* StrChrPQuote */
 int StrChrPQuote(const char *cs,char c) {
 	unsigned int i,pn,qt;
-	
+
 	pn=qt=0;
 	for(i=0;i<strlen(cs);i++)
 		if(cs[i]=='"') qt=!qt;
@@ -166,7 +156,7 @@ int StrChrPQuote(const char *cs,char c) {
 /* StrrChrPQuote */
 int StrrChrPQuote(const char *cs,char c) {
 	int i,pn,qt;
-	
+
 	pn=qt=0;
 	for(i=strlen(cs)-1;i>=0;i--)
 		if(cs[i]=='"') qt=!qt;
@@ -183,7 +173,7 @@ int StrrChrPQuote(const char *cs,char c) {
 int strChrBrackets(const char *string,int n,char c,const char *delimit) {
 	int i,pn,bk,bc,qt,sq,ckpn,ckbk,ckbc,ckqt,cksq;
 	char ch;
-	
+
 	pn=bk=bc=qt=sq=0;
 	ckpn=strchr(delimit,'(')?1:0;
 	ckbk=strchr(delimit,'[')?1:0;
@@ -192,7 +182,7 @@ int strChrBrackets(const char *string,int n,char c,const char *delimit) {
 	cksq=strchr(delimit,'\'')?1:0;
 	if(n<0)
 		n=strlen(string);
-  
+
 	for(i=0;i<n;i++) {
 		ch=string[i];
 		if(ch==c) {
@@ -206,7 +196,7 @@ int strChrBrackets(const char *string,int n,char c,const char *delimit) {
 		else if(ckpn && ch==')') {if(--pn<0) return -2;}
 		else if(ckbk && ch==']') {if(--bk<0) return -3;}
 		else if(ckbc && ch=='}') {if(--bc<0) return -4;} }
-	
+
 	return -1; }
 
 
@@ -214,7 +204,7 @@ int strChrBrackets(const char *string,int n,char c,const char *delimit) {
 int strPbrkBrackets(const char *string,int n,const char *c,const char *delimit,int imin) {
 	int i,pn,bk,bc,qt,sq,ckpn,ckbk,ckbc,ckqt,cksq;
 	char ch;
-	
+
 	pn=bk=bc=qt=sq=0;
 	ckpn=strchr(delimit,'(')?1:0;
 	ckbk=strchr(delimit,'[')?1:0;
@@ -223,7 +213,7 @@ int strPbrkBrackets(const char *string,int n,const char *c,const char *delimit,i
 	cksq=strchr(delimit,'\'')?1:0;
 	if(n<0)
 		n=strlen(string);
-  
+
 	for(i=0;i<n;i++) {
 		ch=string[i];
 		if(strchr(c,ch)) {
@@ -237,7 +227,7 @@ int strPbrkBrackets(const char *string,int n,const char *c,const char *delimit,i
 		else if(ckpn && ch==')') {if(--pn<0) return -2;}
 		else if(ckbk && ch==']') {if(--bk<0) return -3;}
 		else if(ckbc && ch=='}') {if(--bc<0) return -4;} }
-	
+
 	return -1; }
 
 
@@ -245,7 +235,7 @@ int strPbrkBrackets(const char *string,int n,const char *c,const char *delimit,i
 int strparenmatch(const char *string,int index) {
 	char ch1,ch2;
 	int dir,i,count;
-	
+
 	ch1=string[index];
 	if(ch1=='(') {dir=1;ch2=')';}
 	else if(ch1=='[') {dir=1;ch2=']';}
@@ -254,7 +244,7 @@ int strparenmatch(const char *string,int index) {
 	else if(ch1==']') {dir=-1;ch2='[';}
 	else if(ch1=='}') {dir=-1;ch2='{';}
 	else return -1;
-	
+
 	i=index+dir;
 	count=0;
 	for(;;) {
@@ -294,7 +284,7 @@ int strsymbolmatch(char *str1,char *str2,const char *symbols) {
 int wordcount(const char *s) {
 	int n,sp;
 	const char *s2;
-	
+
 	n=0;
 	sp=1;
 	for(s2=s;*s2;s2++) {
@@ -307,7 +297,7 @@ int wordcount(const char *s) {
 int wordcountpbrk(const char *s,const char *symbols) {
 	int n,sp,ischar;
 	const char *s2;
-	
+
 	n=0;
 	sp=1;
 	ischar=0;
@@ -321,7 +311,7 @@ int wordcountpbrk(const char *s,const char *symbols) {
 int strwhichword(const char *s,const char *end) {
 	int n,sp;
 	const char *s2;
-	
+
 	n=0;
 	sp=1;
 	for(s2=s;*s2 && s2!=end+1;s2++) {
@@ -430,7 +420,7 @@ int stringfind(const char * const *slist,int n,const char *s) {
 int stringfind(char **slist,int n,const char *s) {
 #endif
 	int i;
-	
+
 	for(i=0;i<n && strcmp(slist[i],s);i++);
 	return i<n?i:-1; }
 
@@ -443,7 +433,7 @@ int stringnfind(const char * const *slist,int n,const char *s,int nchar) {
 int stringnfind(char **slist,int n,const char *s,int nchar) {
 #endif
 	int i;
-	
+
 	for(i=0;i<n && strncmp(slist[i],s,nchar);i++);
 	return i<n?i:-1; }
 
@@ -457,7 +447,7 @@ int stringnfind(char **slist,int n,const char *s,int nchar) {
 int strreadni(char *s,int n,int *a,char **endp) {
 	int i,ok;
 	char *s2;
-	
+
 	s2=s;
 	ok=1;
 	for(i=0;i<n && ok;i++) {
@@ -472,7 +462,7 @@ int strreadni(char *s,int n,int *a,char **endp) {
 int strreadnli(char *s,int n,long int *a,char **endp) {
 	int i,ok;
 	char *s2;
-	
+
 	s2=s;
 	ok=1;
 	for(i=0;i<n && ok;i++) {
@@ -487,7 +477,7 @@ int strreadnli(char *s,int n,long int *a,char **endp) {
 int strreadnf(char *s,int n,float *a,char **endp) {
 	int i,ok;
 	char *s2;
-	
+
 	s2=s;
 	ok=1;
 	for(i=0;i<n && ok;i++) {
@@ -502,7 +492,7 @@ int strreadnf(char *s,int n,float *a,char **endp) {
 int strreadnd(char *s,int n,double *a,char **endp) {
 	int i,ok;
 	char *s2;
-	
+
 	s2=s;
 	ok=1;
 	for(i=0;i<n && ok;i++) {
@@ -517,7 +507,7 @@ int strreadnd(char *s,int n,double *a,char **endp) {
 int strreadns(char *s,int n,char **a,char **endp) {
 	int i,j;
 	char *s2;
-	
+
 	s2=s;
 	j=1;
 	for(i=0;i<n && *s2;i++) {
@@ -537,7 +527,7 @@ int strreadns(char *s,int n,char **a,char **endp) {
 char *EmptyString() {
 	char *s;
 	int i;
-	
+
 	s=(char*) calloc(STRCHAR,sizeof(char));
 	if(s)	for(i=0;i<STRCHAR;i++)	s[i]='\0';
 	return s; }
@@ -575,7 +565,7 @@ unsigned char *PascalString(const char *s) {
 /* strPreCat */
 char *strPreCat(char *str,const char *cat,int start,int stop) {
 	int i,n,len;
-	
+
 	n=stop-start;
 	len=strlen(str);
 	for(i=len+n;i>=n;i--) str[i]=str[i-n];
@@ -586,7 +576,7 @@ char *strPreCat(char *str,const char *cat,int start,int stop) {
 /* strPostCat */
 char *strPostCat(char *str,const char *cat,int start,int stop) {
 	int i,n,len;
-	
+
 	n=stop-start;
 	len=strlen(str);
 	for(i=0;i<n;i++) str[len+i]=cat[start+i];
@@ -614,7 +604,7 @@ char *strMidCat(char *str,int s1,int s2,const char *cat,int start,int stop) {
 int strchrreplace(char *str,char charfrom,char charto) {
 	int n;
 	char *s1;
-	
+
 	n=0;
 	while((s1=strchr(str,charfrom))) {
 		*s1=charto;
@@ -627,7 +617,7 @@ int strstrreplace(char *str,const char *strfrom,const char *strto,int max) {
 	int n,diff,lento,lenfrom,over;
 	char *s1,*s2;
 	int i,j;
-	
+
 	if(strto) lento=strlen(strto);
 	else lento=0;
 	lenfrom=strlen(strfrom);
@@ -657,7 +647,7 @@ int strstrreplace(char *str,const char *strfrom,const char *strto,int max) {
 /* strcutwhite */
 void strcutwhite(char *str,int end) {
 	int i,j;
-	
+
 	if(end&2) {	// end of string
 		for(i=strlen(str)-1;i>=0 && isspace(str[i]);i--);
 		str[i+1]='\0'; }
@@ -672,7 +662,7 @@ void strcutwhite(char *str,int end) {
 /* strbslash2escseq */
 int strbslash2escseq(char *str) {
 	char *s1,*s2;
-	
+
 	s1=s2=str;
 	while(*s2) {
 		if(*s2=='\\') {
@@ -893,7 +883,7 @@ int strwildcardmatchandsub(const char *pat,const char *str,char *dest,int starex
 int permutelex(int *seq,int n) {
 	int i,j;
 	int temp;
-	
+
 	i=n-1;
 	while(i>0 && seq[i-1]>=seq[i]) i--;
 	if(i==0) {						// input was final sequence
@@ -906,14 +896,14 @@ int permutelex(int *seq,int n) {
 			i++;
 			j--; }
 		return 2; }
-	
+
 	j=n;
 	while(seq[j-1]<=seq[i-1]) j--;
-	
+
 	temp=seq[i-1];			// swap values at positions (i-1) and (j-1)
 	seq[i-1]=seq[j-1];
 	seq[j-1]=temp;
-	
+
 	i++;
 	j=n;
 	while(i<j) {
@@ -922,11 +912,11 @@ int permutelex(int *seq,int n) {
 		seq[j-1]=temp;
 		i++;
 		j--; }
-	
+
 	i=n-1;
 	while(i>0 && seq[i-1]>=seq[i]) i--;
 	if(i==0) return 1;	// at final sequence
-	
+
 	return 0; }
 
 
@@ -1135,7 +1125,7 @@ int strEnhWildcardMatch(const char *pat,const char *str) {
 	if(str)
 		for(i=0;i<nr;i++)
 			if(strwildcardmatch(results[i],str)) return 1;
-	
+
 	return 0; }
 
 
@@ -1589,8 +1579,3 @@ int strmathsscanf(const char *str,const char *format,char **varnames,const doubl
 
  failure:
 	return 0; }
-
-
-
-
-

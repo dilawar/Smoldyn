@@ -12,7 +12,7 @@ of the Gnu Lesser General Public License (LGPL). */
 
 /******************* String classification ************************/
 
-int strisnumber(const char *str);
+extern int strisnumber(const char *str);
 int strokname(const char *name);
 int strhasname(const char *string,const char *name);
 int strbegin(const char *strshort,const char *strlong,int casesensitive);
