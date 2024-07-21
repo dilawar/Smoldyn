@@ -477,6 +477,7 @@ endif()
 set(RUST_LIBSTEVE ${CMAKE_CURRENT_SOURCE_DIR}/steve/target/release/libsteve.a)
 add_custom_command(OUTPUT ${RUST_LIBSTEVE}
     COMMAND cargo build --release
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/steve/src/lib.rs
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/steve
     COMMENT "Building steve (rust)"
 )
