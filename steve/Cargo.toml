@@ -9,3 +9,6 @@ crate-type = ["staticlib"]
 
 [build-dependencies]
 cbindgen = "0.26.0"
+
+[dependencies]
+libc = "0.2.155"
