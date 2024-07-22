@@ -36,41 +36,6 @@ int allocresults(char ***resultsptr,int *maxrptr,int nchar);
 /******************* String classification ************************/
 /******************************************************************/
 
-
-/* strokname */
-int strokname(const char *name) {
-	int ok;
-
-	ok=1;
-	ok=ok && isalpha(*name);
-	for(name++;*name && ok;name++)
-		ok=ok && (isalnum(*name) || *name=='_');
-	return ok; }
-
-
-/* strbegin */
-int strbegin(const char *strshort,const char *strlong,int casesensitive) {
-	int i;
-
-	i=0;
-	if(casesensitive)
-		while(strshort[i]!='\0' && strshort[i]==strlong[i]) i++;
-	else
-		while(strshort[i]!='\0' && tolower(strshort[i])==tolower(strlong[i])) i++;
-	if(strshort[i]=='\0' && i>0) return 1;
-	return 0; }
-
-
-/* strsymbolcount */
-int strsymbolcount(const char *s,char c) {
-	int n;
-
-	n=0;
-	for(;*s;s++)
-		if(*s==c) n++;
-	return n; }
-
-
 /* strisfunctionform */
 int strisfunctionform(char *str,char **parenptr) {
 	int i,len,ok;
