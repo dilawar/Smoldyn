@@ -483,6 +483,15 @@ add_custom_command(OUTPUT ${RUST_LIBSTEVE}
     COMMENT "Building steve (rust)"
 )
 
+set(RUST_SMOLDYN ${CMAKE_CURRENT_SOURCE_DIR}/steve/target/release/libsteve.a)
+add_custom_target(rusty_smoldyn ALL DEPENDS ${RUST_SMOLDYN})
+add_custom_command(OUTPUT ${RUST_SMOLDYN}
+    COMMAND cargo build --release
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/smoldyn/src/lib.rs
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/smoldyn
+    COMMENT "Building smoldyn (rust)"
+)
+
 
 ####### Targets ##########
 add_subdirectory(source/libSteve)
@@ -495,7 +504,7 @@ add_library(smoldyn_static STATIC ${SRC_FILES}
 
 set_property(TARGET smoldyn_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(smoldyn_static PUBLIC ${DEP_LIBS})
-target_link_libraries(smoldyn_static PUBLIC ${RUST_LIBSTEVE})
+target_link_libraries(smoldyn_static PUBLIC ${RUST_LIBSTEVE} ${RUST_SMOLDYN})
 set_target_properties(smoldyn_static PROPERTIES PREFIX "lib")
 
 if (OPTION_TARGET_LIBSMOLDYN)
