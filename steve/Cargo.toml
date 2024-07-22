@@ -8,5 +8,11 @@ name = "steve"
 crate-type = ["staticlib"]
 
 [dependencies]
+autocxx = "0.27.0"
+cxx = "1.0.124"
 libc = "0.2.155"
 syn = "2.0.72"
+
+[build-dependencies]
+autocxx-build = "0.27.0"
+miette = "7.2.0"
