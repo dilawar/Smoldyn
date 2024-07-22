@@ -7,4 +7,5 @@ edition = "2021"
 name = "steve"
 crate-type = ["staticlib"]
 
-[dependencies]
+[build-dependencies]
+cbindgen = "0.26.0"
