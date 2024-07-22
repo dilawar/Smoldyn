@@ -48,18 +48,6 @@ int strokname(const char *name) {
 	return ok; }
 
 
-/* strhasname */
-int strhasname(const char *string,const char *name) {
-	int i,len;
-
-	len=strlen(name);
-	while(*string) {
-		for(i=0;i<len && *string==name[i];i++) string++;
-		if(i==len && (*string=='\0' || !(isalnum(*string) || *string=='_'))) return 1;
-		while(*string && (*string!=name[0] || isalnum(*(string-1)) || *(string-1)=='_')) string++; }
-	return 0; }
-
-
 /* strbegin */
 int strbegin(const char *strshort,const char *strlong,int casesensitive) {
 	int i;

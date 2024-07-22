@@ -475,6 +475,7 @@ endif()
 
 ####### Build Rust targets ##############
 set(RUST_LIBSTEVE ${CMAKE_CURRENT_SOURCE_DIR}/steve/target/release/libsteve.a)
+add_custom_target(rusty_steve ALL DEPENDS ${RUST_LIBSTEVE})
 add_custom_command(OUTPUT ${RUST_LIBSTEVE}
     COMMAND cargo build --release
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/steve/src/lib.rs
