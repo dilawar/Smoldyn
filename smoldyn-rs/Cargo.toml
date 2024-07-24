@@ -1,9 +1,16 @@
 [package]
-name = "smoldyn-rs"
+name = "smoldyn"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.10", features = ["derive"] }
+cxx = { version = "1.0.124", features = ["c++17"] }
+libc = "0.2.155"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 [build-dependencies]
 cmake = "0.1.50"
+cxx-build = "1.0.124"
