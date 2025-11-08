@@ -1,5 +1,7 @@
-# python binding.
+# smoldyn python binding.
 
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
 # find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module Development.Embed VERSION 3.8.15...3.12)
 
 # recompile libsmoldyn for PYTHON.
@@ -13,10 +15,8 @@ target_compile_options(_pysmoldyn PRIVATE -DENABLE_PYTHON_CALLBACK)
 # especially where scanf is used for user input.
 target_compile_options(_pysmoldyn PRIVATE -DCOMPILE_AS_PY_MODULE)
 
-
 target_include_directories(_pysmoldyn PRIVATE ${Python3_INCLUDE_DIRS} ${PYBIND11_SOURCE_DIR}/include)
 
-# This is suggested by pybind11: reduces binary size and disables some warnings.
 set_target_properties(_pysmoldyn PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(_pysmoldyn PRIVATE ${DEP_LIBS})
 target_link_libraries(_pysmoldyn PUBLIC ${PYTHON_LIBRARIES})
@@ -27,18 +27,6 @@ add_custom_target(install_deps
     COMMENT "Installing Python modules for testing"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     VERBATIM)
-
-# FIXME: If it comes in your way, comment it out.
-# FIXME: FOllowing runs on github actions and other CI (for Windows only).
-# Its very hard to locate correct version of Python on every cloud based CI.
-# So I let cmake install the dependencies at build time.
-if(WINDOWS_BUILD)
-    add_custom_command(TARGET _pysmoldyn PRE_BUILD
-        COMMAND ${Python3_EXECUTABLE} -m pip install wheel numpy setuptools --user
-        COMMENT "Installing build dependencies on Windows"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        VERBATIM)
-endif()
 
 pybind11_add_module(_smoldyn MODULE
     CallbackFunc.cpp
@@ -52,64 +40,15 @@ target_compile_options(_smoldyn PRIVATE
     # https://pybind11.readthedocs.io/en/stable/faq.html#someclass-declared-with-greater-visibility-than-the-type-of-its-field-someclass-member-wattributes
     -fvisibility=hidden)
 
-target_include_directories(_smoldyn PRIVATE
-    ${PYTHON_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/source/external/pybind11/include)
+target_include_directories(_smoldyn PRIVATE ${PYTHON_INCLUDE_DIRS} ${PYBIND11_SOURCE_DIR}/include)
+
 
 # If generator pattern is not used here, cmake produces module in Release/Debug folders
 # which will break the wheels.
 set_target_properties(_smoldyn PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY $<1:${CMAKE_CURRENT_SOURCE_DIR}/smoldyn/>)
 
-# ../examples/CMakeLists.txt file.
-set(PY_SMOLDYN_OUTDIR ${CMAKE_BINARY_DIR}/py)
-file(MAKE_DIRECTORY ${PY_SMOLDYN_OUTDIR})
-
-add_custom_target(copy_python_tree ALL
-    DEPENDS _smoldyn
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/source/python/smoldyn ${PY_SMOLDYN_OUTDIR}/smoldyn
-    COMMENT "Copying python source tree to binary directory"
-    VERBATIM)
-
 target_link_libraries(_smoldyn PRIVATE _pysmoldyn)
-
-# copy pyproject.toml.in to pyproject.toml
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml.in
-    ${PY_SMOLDYN_OUTDIR}/pyproject.toml)
-
-add_custom_target(wheel ALL
-    DEPENDS _smoldyn
-    COMMAND ${Python3_EXECUTABLE} -m pip wheel . -w ${CMAKE_BINARY_DIR}
-    WORKING_DIRECTORY ${PY_SMOLDYN_OUTDIR}
-    COMMENT "Generating wheel in ${CMAKE_BINARY_DIR} with ARCHFLAGS='${ARCHFLAGS}'"
-    VERBATIM)
-
-# This target is used by install script (useful in packaging).
-add_custom_target(pyinstall
-    COMMAND ${Python3_EXECUTABLE} -m pip install --prefix ${CMAKE_INSTALL_PREFIX}
-    WORKING_DIRECTORY ${PY_SMOLDYN_OUTDIR}
-    COMMENT "RUNNING: pip install --prefix ${CMAKE_INSTALL_PREFIX}"
-    VERBATIM)
-
-add_custom_target(pyinstall_venv
-    DEPENDS _smoldyn
-    COMMAND ${Python3_EXECUTABLE} -m pip install
-    WORKING_DIRECTORY ${PY_SMOLDYN_OUTDIR}
-    COMMENT "RUNNING: python3 -m pip install"
-    VERBATIM)
-
-add_custom_target(pyuninstall
-    COMMAND ${Python3_EXECUTABLE} -m pip uninstall smoldyn
-    COMMENT "RUNNING: `pip uninstall smoldyn`"
-    VERBATIM)
-
-add_custom_target(pydevel
-    DEPENDS _smoldyn
-    COMMAND ${Python3_EXECUTABLE} -m pip install -e
-    WORKING_DIRECTORY ${PY_SMOLDYN_OUTDIR}
-    COMMENT "RUNNING: python3 -m pip install -e"
-    VERBATIM)
 
 # Run static type checking using mypy (developer only). Works best with
 # python3.7+
@@ -120,17 +59,6 @@ add_custom_target(lint
 add_custom_target(lint_strict
     COMMAND mypy --strict ${CMAKE_SOURCE_DIR}/source/python/smoldyn/*.py
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-
-#
-# Install target
-#
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/install_wheel.py.in
-    ${CMAKE_BINARY_DIR}/install_wheel.py)
-
-install(CODE "execute_process(
-    COMMAND ${Python3_EXECUTABLE} install_wheel.py
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )")
 
 ###  python tests ###
 enable_testing()

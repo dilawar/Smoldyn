@@ -381,20 +381,6 @@ if (OPTION_USE_OPENGL)
 endif()
 
 
-####### Build with LibX11 (only required for static build on Mac) ##########
-
-#if (OPTION_STATIC AND OPTION_USE_OPENGL AND HAVE_OPENGL)
-#	   find_package(X11)
-#	   if (X11_FOUND)
-#        message(STATUS "Found X11: '${X11_INCLUDE_DIR}', '${X11_LIBRARIES}'")
-#    else ()
-#        message(FATAL_ERROR "X11 not found")
-#    endif ()
-#    include_directories(${X11_INCLUDE_DIR})
-#    list(APPEND DEP_LIBS ${X11_LIBRARIES})
-#endif()
-
-
 ####### Option: Build with LibTiff ##########
 
 if (OPTION_USE_LIBTIFF)
