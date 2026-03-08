@@ -442,7 +442,7 @@ endif()
 ###### Option: Build browser UI ##########
 if(OPTION_BROWSER_UI)
    find_package(cppzmq REQUIRED)
-   add_definitions(-DBROWSER_UI)
+   add_definitions(-DOPTION_BROWSER_UI)
    list(APPEND DEP_LIBS cppzmq)
 endif()
 
