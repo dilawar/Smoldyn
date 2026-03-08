@@ -16,10 +16,10 @@
 #include <time.h>
 
 #ifdef OPTION_BROWSER_UI
+#include "mongoose.h"
 #include <atomic>
 #include <iostream>
 #include <thread>
-#include <zmq.hpp>
 
 std::atomic<bool> g_stop_ui(false);
 #endif
@@ -32,18 +32,26 @@ std::atomic<bool> g_stop_ui(false);
 #endif
 
 #ifdef OPTION_BROWSER_UI
-void launch_ui_thread(simptr sim) {
-  zmq::context_t ui_ctx{1};
-  zmq::socket_t ui_socket{ui_ctx, zmq::socket_type::rep};
-  ui_socket.bind("tcp://*:31414");
-  ui_socket.send(zmq::buffer("ready"), zmq::send_flags::dontwait);
-  while (!g_stop_ui) {
-    zmq::message_t msg;
-    ui_socket.recv(msg, zmq::recv_flags::none);
-    std::cout << "Received: " << msg.to_string() << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
+  simptr sim = NULL;
+  if (c->fn_data) {
+    sim = static_cast<simptr>(c->fn_data);
   }
-  std::cout << "UI thread exiting" << std::endl;
+
+  if (ev == MG_EV_OPEN && c->is_listening == 1) {
+    MG_INFO(("SERVER is listening"));
+  } else if (ev == MG_EV_ACCEPT) {
+    MG_INFO(("SERVER accepted a connection"));
+  } else if (ev == MG_EV_READ) {
+    struct mg_iobuf *r = &c->recv;
+    MG_INFO(("SERVER got data: %.*s", r->len, r->buf));
+    mg_send(c, r->buf, r->len); // echo it back
+    r->len = 0;                 // Tell Mongoose we've consumed data
+  } else if (ev == MG_EV_CLOSE) {
+    MG_INFO(("SERVER disconnected"));
+  } else if (ev == MG_EV_ERROR) {
+    MG_INFO(("SERVER error: %s", (char *)ev_data));
+  }
 }
 #endif
 
@@ -171,7 +179,25 @@ int main(int argc, char **argv) {
 
 // launch the UI thread.
 #if OPTION_BROWSER_UI
-    std::thread ui_thread(launch_ui_thread, sim);
+    struct mg_mgr mgr;
+    mg_mgr_init(&mgr);
+
+    /* pass simptr as fn_data */
+    auto c =
+        mg_http_listen(&mgr, "http://0.0.0.0:31414", server_event_handler, sim);
+    if (c == NULL) {
+      std::cerr << "server_event_handler: cannot create listener";
+      return -1;
+    }
+
+    /* launch a thread to listen to events. */
+    std::thread server_thread([&mgr]() {
+      while (!g_stop_ui.load()) {
+        mg_mgr_poll(&mgr, 100);
+      }
+      return 0;
+    });
+
 #endif
 
     if (!er) {
@@ -196,6 +222,7 @@ int main(int argc, char **argv) {
 #if OPTION_BROWSER_UI
     // stop the UI thread.
     g_stop_ui.store(true);
+    server_thread.join();
 #endif
     simfree(sim);
     simfuncfree();

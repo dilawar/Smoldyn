@@ -441,9 +441,10 @@ endif()
 
 ###### Option: Build browser UI ##########
 if(OPTION_BROWSER_UI)
-   find_package(cppzmq REQUIRED)
-   add_definitions(-DOPTION_BROWSER_UI)
-   list(APPEND DEP_LIBS cppzmq)
+    add_definitions(-DOPTION_BROWSER_UI=1)
+    add_library(mongoose STATIC source/web-server/mongoose.c)
+    include_directories(source/web-server)
+    list(APPEND DEP_LIBS mongoose)
 endif()
 
 
