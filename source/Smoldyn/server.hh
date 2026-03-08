@@ -19,19 +19,14 @@ void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
     sim = static_cast<simptr>(c->fn_data);
   }
 
-  if (ev == MG_EV_OPEN && c->is_listening == 1) {
-    MG_INFO(("SERVER is listening"));
-  } else if (ev == MG_EV_ACCEPT) {
-    MG_INFO(("SERVER accepted a connection"));
-  } else if (ev == MG_EV_READ) {
-    struct mg_iobuf *r = &c->recv;
-    MG_INFO(("SERVER got data: %.*s", r->len, r->buf));
-    mg_send(c, r->buf, r->len); // echo it back
-    r->len = 0;                 // Tell Mongoose we've consumed data
-  } else if (ev == MG_EV_CLOSE) {
-    MG_INFO(("SERVER disconnected"));
-  } else if (ev == MG_EV_ERROR) {
-    MG_INFO(("SERVER error: %s", (char *)ev_data));
+  if (ev == MG_EV_HTTP_MSG) {
+    struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+    if (mg_match(hm->uri, mg_str("/"), NULL)) {
+      mg_http_reply(c, 200, "", "{%m:%d}\n", MG_ESC("status"), 1);
+    } else {
+      struct mg_http_serve_opts opts = {.root_dir = ".", .fs = &mg_fs_posix};
+      mg_http_serve_dir(c, hm, &opts);
+    }
   }
 }
 

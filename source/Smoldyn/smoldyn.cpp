@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 
     /* pass simptr as fn_data */
     auto c =
-        mg_http_listen(&mgr, "http://0.0.0.0:31414", server_event_handler, sim);
+        mg_http_listen(&mgr, "http://0.0.0.0:3141", server_event_handler, sim);
     if (c == NULL) {
       std::cerr << "server_event_handler: cannot create listener";
       return -1;
