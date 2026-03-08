@@ -9,9 +9,17 @@
 #include "smoldyn.h"
 #include <atomic>
 #include <iostream>
-#include <thread>
+#include <sstream>
+#include <string>
 
 std::atomic<bool> g_stop_ui(false);
+
+std::string welcome_page() {
+  std::stringstream ss;
+  ss << "Welcome to Smoldyn!";
+
+  return ss.str();
+}
 
 void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
   simptr sim = NULL;
@@ -22,7 +30,7 @@ void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_match(hm->uri, mg_str("/"), NULL)) {
-      mg_http_reply(c, 200, "", "{%m:%d}\n", MG_ESC("status"), 1);
+      mg_http_reply(c, 200, "", welcome_page().c_str(), 1);
     } else {
       struct mg_http_serve_opts opts = {.root_dir = ".", .fs = &mg_fs_posix};
       mg_http_serve_dir(c, hm, &opts);

@@ -17,6 +17,8 @@
 
 #ifdef OPTION_BROWSER_UI
 #include "server.hh"
+#include <thread>
+#include <cstdio>
 #endif
 
 #include "smoldyn.h"
@@ -157,7 +159,7 @@ int main(int argc, char **argv) {
     auto c =
         mg_http_listen(&mgr, "http://0.0.0.0:3141", server_event_handler, sim);
     if (c == NULL) {
-      std::cerr << "server_event_handler: cannot create listener";
+        std::puts("server_event_handler: cannot create listener");
       return -1;
     }
 
