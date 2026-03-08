@@ -7,8 +7,8 @@
 
 #include "mongoose.h"
 #include "smoldyn.h"
+#include <array>
 #include <atomic>
-#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -38,6 +38,29 @@ std::string welcome_page() {
   return ss.str();
 }
 
+std::string simptr_to_svg(simptr sim, size_t width, size_t height) {
+  std::stringstream ss;
+  ss << "<svg xmlns='http://www.w3.org/2000/svg' width='" << width
+     << "' height='" << height << "'>";
+
+  // add time.
+  ss << "<text x='20' y='20' fill='black'> time=" << sim->time
+     << ", end time=" << sim->tmax << ", dt=" << sim->dt << "</text>";
+
+  std::array<double, 3> pt1 = {0, 0, 0};
+  std::array<double, 3> pt2 = {0, 0, 0};
+  pt1[0] = sim->wlist[0]->pos;
+  pt2[0] = sim->wlist[1]->pos;
+  pt1[1] = sim->dim > 1 ? sim->wlist[2]->pos : 0;
+  pt2[1] = sim->dim > 1 ? sim->wlist[3]->pos : 0;
+  pt1[2] = sim->dim > 2 ? sim->wlist[4]->pos : 0;
+  pt2[2] = sim->dim > 2 ? sim->wlist[5]->pos : 0;
+
+  ss << "</svg>";
+
+  return ss.str();
+}
+
 void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
   simptr sim = NULL;
   if (c->fn_data) {
@@ -51,9 +74,7 @@ void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
     }
     if (mg_match(hm->uri, mg_str("/svg"), NULL)) {
       std::stringstream ss;
-      ss << "<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>";
-      // ss << sim->svg_content();
-      ss << "</svg>";
+      ss << simptr_to_svg(sim, 600, 600);
       mg_http_reply(c, 200, "", ss.str().c_str(), 0);
     } else {
       mg_http_reply(c, 404, "", "Not found", 0);
