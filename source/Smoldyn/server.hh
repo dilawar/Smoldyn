@@ -48,9 +48,15 @@ void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_match(hm->uri, mg_str("/"), NULL)) {
       mg_http_reply(c, 200, "", welcome_page().c_str(), 1);
+    }
+    if (mg_match(hm->uri, mg_str("/svg"), NULL)) {
+      std::stringstream ss;
+      ss << "<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>";
+      // ss << sim->svg_content();
+      ss << "</svg>";
+      mg_http_reply(c, 200, "", ss.str().c_str(), 0);
     } else {
-      struct mg_http_serve_opts opts = {.root_dir = ".", .fs = &mg_fs_posix};
-      mg_http_serve_dir(c, hm, &opts);
+      mg_http_reply(c, 404, "", "Not found", 0);
     }
   }
 }
