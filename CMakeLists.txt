@@ -60,6 +60,7 @@ option(OPTION_USE_ZLIB "Build with Zlib support" OFF)
 option(OPTION_PYTHON  "Build Python module" ON)
 option(OPTION_EXAMPLES "Run Libsmoldyn tests" OFF)
 option(OPTION_DOCS "Generate documentation" OFF)
+option(OPTION_BROWSER_UI "Enable browser UI (beta)" ON)
 set(PYTHON_VERSION "Auto" CACHE STRING "Which Python version (Auto)")
 
 #
@@ -96,7 +97,7 @@ message(STATUS "Option to include Zlib: ${OPTION_USE_ZLIB}")
 message(STATUS "Option to incude Python module: ${OPTION_PYTHON}")
 message(STATUS "Option to run Libsmoldyn examples: ${OPTION_EXAMPLES}")
 message(STATUS "Option to build documentation: ${OPTION_DOCS}")
-
+message(STATUS "Option to build browser UI: ${OPTION_BROWSER_UI}")
 
 
 ####### Compiler flags ######################
@@ -436,6 +437,13 @@ if(OPTION_VTK)
         message(FATAL_ERROR "Only vtk version <8.0 is supported")
     endif()
     list(APPEND DEP_LIBS ${VTK_LIBRARIES})
+endif()
+
+###### Option: Build browser UI ##########
+if(OPTION_BROWSER_UI)
+   find_package(cppzmq REQUIRED)
+   add_definitions(-DBROWSER_UI)
+   list(APPEND DEP_LIBS cppzmq)
 endif()
 
 
