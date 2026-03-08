@@ -16,7 +16,24 @@ std::atomic<bool> g_stop_ui(false);
 
 std::string welcome_page() {
   std::stringstream ss;
-  ss << "Welcome to Smoldyn!";
+
+  // head
+  auto htmx_cdn =
+      "https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js";
+  ss << "<!DOCTYPE html><html><head><title>Smoldyn</title>";
+  ss << "<script src=\"" << htmx_cdn << "\"></script>";
+  ss << "</head>";
+
+  // body
+  ss << "<body>";
+  ss << "<h1>Welcome to Smoldyn!</h1>";
+
+  // rest of the page goes here.
+  ss << "<div hx-get='/svg' hx-trigger='every 500ms'"
+     << "style='width:600px;height:600px;border:1px dotted;'></div>";
+
+  // close.
+  ss << "</body></html>";
 
   return ss.str();
 }
