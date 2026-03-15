@@ -29,7 +29,7 @@ std::string welcome_page() {
   ss << "<h1>Welcome to Smoldyn!</h1>";
 
   // rest of the page goes here.
-  ss << "<div hx-get='/svg' hx-trigger='every 500ms'"
+  ss << "<div hx-get='/svg' hx-trigger='every 50ms'"
      << "style='width:600px;height:600px;border:1px dotted;'></div>";
 
   // close.
