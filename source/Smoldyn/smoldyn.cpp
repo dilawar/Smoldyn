@@ -17,8 +17,8 @@
 
 #ifdef OPTION_BROWSER_UI
 #include "server.hh"
-#include <thread>
 #include <cstdio>
+#include <thread>
 #endif
 
 #include "smoldyn.h"
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
     auto c =
         mg_http_listen(&mgr, "http://0.0.0.0:3141", server_event_handler, sim);
     if (c == NULL) {
-        std::puts("server_event_handler: cannot create listener");
+      std::puts("server_event_handler: cannot create listener");
       return -1;
     }
 
@@ -170,6 +170,14 @@ int main(int argc, char **argv) {
       }
       return 0;
     });
+
+    // waiting for server to start.
+    while (!g_ui_server_started.load()) {
+      std::cout << "Waiting for user to connect..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    std::cout << "User connected via browser. Simulation will start now..."
+              << std::endl;
 
 #endif
 
