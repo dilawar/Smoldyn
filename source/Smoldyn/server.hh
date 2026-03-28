@@ -7,7 +7,7 @@
 
 #include "mongoose.h"
 #include "smoldyn.h"
-#include <array>
+#include <algorithm>
 #include <atomic>
 #include <iostream>
 #include <sstream>
@@ -23,29 +23,86 @@ std::atomic<bool> g_stop_ui(false);
 // user won't miss any display.
 std::atomic<bool> g_ui_server_started(false);
 
-std::string simptr_to_svg(const simptr sim, size_t width, size_t height) {
+std::string simptr_to_svg(const simptr sim, size_t svgw, size_t svgh) {
   std::stringstream ss;
-  ss << "<svg xmlns='http://www.w3.org/2000/svg' width='" << width
-     << "' height='" << height << "'>";
 
-  // add time.
-  ss << "<text x='20' y='20' fill='black'> time=" << sim->time
-     << ", end time=" << sim->tmax << ", dt=" << sim->dt << "</text>";
+  // Simulation bounding box from walls.
+  double xmin = sim->wlist[0]->pos;
+  double xmax = sim->wlist[1]->pos;
+  double ymin = (sim->dim > 1) ? sim->wlist[2]->pos : 0.0;
+  double ymax = (sim->dim > 1) ? sim->wlist[3]->pos : 1.0;
 
-  std::array<double, 3> pt1 = {0, 0, 0};
-  std::array<double, 3> pt2 = {0, 0, 0};
-  pt1[0] = sim->wlist[0]->pos;
-  pt2[0] = sim->wlist[1]->pos;
-  pt1[1] = sim->dim > 1 ? sim->wlist[2]->pos : 0;
-  pt2[1] = sim->dim > 1 ? sim->wlist[3]->pos : 0;
-  pt1[2] = sim->dim > 2 ? sim->wlist[4]->pos : 0;
-  pt2[2] = sim->dim > 2 ? sim->wlist[5]->pos : 0;
+  double sim_w = xmax - xmin;
+  double sim_h = ymax - ymin;
 
-  std::cout << "111: " << pt1[0] << " " << pt1[1] << " " << pt1[2] << std::endl;
-  std::cout << "112: " << pt2[0] << " " << pt2[1] << " " << pt2[2] << std::endl;
+  // Leave a margin so molecules at the boundary are fully visible.
+  const double pad = 20.0;
+  double usable_w = (double)svgw - 2.0 * pad;
+  double usable_h = (double)svgh - 2.0 * pad;
+
+  // Uniform scale to preserve aspect ratio.
+  double scale = (sim_w > 0 && sim_h > 0)
+                     ? std::min(usable_w / sim_w, usable_h / sim_h)
+                     : 1.0;
+
+  // Coordinate transform: sim -> SVG pixels.
+  // SVG y-axis points downward, so we flip y.
+  auto to_svgx = [&](double x) { return pad + (x - xmin) * scale; };
+  auto to_svgy = [&](double y) { return pad + (ymax - y) * scale; };
+
+  ss << "<svg xmlns='http://www.w3.org/2000/svg' width='" << svgw
+     << "' height='" << svgh << "'>";
+
+  // White background.
+  ss << "<rect width='" << svgw << "' height='" << svgh
+     << "' fill='white'/>";
+
+  // Simulation boundary box.
+  double box_x = to_svgx(xmin);
+  double box_y = to_svgy(ymax);
+  double box_w = sim_w * scale;
+  double box_h = sim_h * scale;
+  ss << "<rect x='" << box_x << "' y='" << box_y << "' width='" << box_w
+     << "' height='" << box_h
+     << "' fill='none' stroke='black' stroke-width='1'/>";
+
+  // Time label.
+  ss << "<text x='5' y='12' font-size='11' fill='black'>"
+     << "t=" << sim->time << " / " << sim->tmax << "</text>";
+
+  // Molecules.
+  molssptr mols = sim->mols;
+  if (mols) {
+    for (int ll = 0; ll < mols->nlist; ll++) {
+      if (mols->listtype[ll] != MLTsystem)
+        continue;
+      for (int m = 0; m < mols->nl[ll]; m++) {
+        moleculeptr mptr = mols->live[ll][m];
+        int i = mptr->ident;
+        enum MolecState ms = mptr->mstate;
+
+        double disp = mols->display[i][ms];
+        if (disp <= 0.0)
+          continue;
+
+        // Color: mols->color[i][ms] is [r, g, b] in 0..1.
+        double *rgb = mols->color[i][ms];
+        int r = (int)(rgb[0] * 255.0);
+        int g = (int)(rgb[1] * 255.0);
+        int b = (int)(rgb[2] * 255.0);
+
+        double cx = to_svgx(mptr->pos[0]);
+        double cy = (sim->dim > 1) ? to_svgy(mptr->pos[1]) : to_svgy(0.5);
+        // Treat display size as radius in pixels directly.
+        double r_px = std::max(disp, 2.0);
+
+        ss << "<circle cx='" << cx << "' cy='" << cy << "' r='" << r_px
+           << "' fill='rgb(" << r << "," << g << "," << b << ")'/>";
+      }
+    }
+  }
 
   ss << "</svg>";
-
   return ss.str();
 }
 
@@ -92,14 +149,14 @@ void server_event_handler(struct mg_connection *c, int ev, void *ev_data) {
 
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_match(hm->uri, mg_str("/"), NULL)) {
-      mg_http_reply(c, 200, "", welcome_page(sim).c_str(), 1);
-    }
-    if (mg_match(hm->uri, mg_str("/svg"), NULL)) {
-      std::stringstream ss;
-      ss << simptr_to_svg(sim, 600, 600);
-      mg_http_reply(c, 200, "", ss.str().c_str(), 0);
+      std::string page = welcome_page(sim);
+      mg_http_reply(c, 200, "Content-Type: text/html\r\n", "%s", page.c_str());
+    } else if (mg_match(hm->uri, mg_str("/svg"), NULL)) {
+      std::string svg = simptr_to_svg(sim, 600, 600);
+      mg_http_reply(c, 200, "Content-Type: image/svg+xml\r\n",
+                    "%s", svg.c_str());
     } else {
-      mg_http_reply(c, 404, "", "Not found", 0);
+      mg_http_reply(c, 404, "", "Not found\n", 0);
     }
   }
 }
