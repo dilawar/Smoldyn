@@ -229,7 +229,7 @@ function render(frame) {
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, vdata, gl.DYNAMIC_DRAW);
 
-  gl.clearColor(0.08, 0.08, 0.12, 1.0);
+  gl.clearColor(1.0, 1.0, 1.0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLES, 0, mols.length * 6);
 
