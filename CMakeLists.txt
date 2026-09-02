@@ -222,22 +222,7 @@ message(STATUS "BioNetGen path: '${BNG2_PATH}' ")
 ####### Option: Build with OpenGL (gl and glu only, not glut) ##########
 
 if (OPTION_USE_OPENGL)
-    find_package(OpenGL COMPONENTS OpenGL GLX)
-
-    if (VCELL_BUILD)
-        set(HAVE_OPENGL TRUE)
-        set(HAVE_GL_GL_H TRUE)
-        set(HAVE_GL_GLU_H TRUE)
-    endif()
-
-    if(OpenGL_FOUND)
-        message(STATUS "OpenGL found: '${OPENGL_INCLUDE_DIRS}', '${OPENGL_opengl_LIBRARY}'")
-    else()
-        message(STATUS "OpenGL include and library variables: '${OPENGL_INCLUDE_DIRS}', '${OPENGL_opengl_LIBRARY}'")
-        message(FATAL_ERROR "OpenGL not found.  Building without OpenGL is possible.")
-    endif()
-
-    set(HAVE_OPENGL TRUE)
+    find_package(OpenGL COMPONENTS OpenGL GLX REQUIRED)
     include_directories(${OPENGL_INCLUDE_DIRS})
     list(APPEND DEP_LIBS ${OPENGL_opengl_LIBRARY} ${OPENGL_glu_LIBRARY})
 endif()
@@ -257,44 +242,17 @@ if (OPTION_USE_OPENGL)
         endif()
     elseif (WINDOWS_BUILD)
         add_compile_definitions(FREEGLUT_STATIC)
-        find_path(GLUT_INCLUDE_DIR GL/glut.h source/MSVClibs NO_DEFAULT_PATH)
+        find_path(GLUT_INCLUDE_DIRS GL/glut.h source/MSVClibs NO_DEFAULT_PATH)
         set(HAVE_GL_GLUT_H TRUE)
         find_file(GLUT_LIBRARIES NAMES freeglut_static.lib PATHS source/MSVClibs NO_DEFAULT_PATH)
         set(GLUT_FOUND TRUE)
     else ()
-        find_file(HAVE_GL_GLUT_H GL/glut.h)
-        find_file(HAVE_GLUT_GLUT_H GLUT/glut.h)
-        include(FindGLUT)
+        find_package(GLUT REQUIRED)
     endif ()
 
-    if (GLUT_INCLUDE_DIR AND GLUT_LIBRARIES)
-        set(GLUT_FOUND TRUE)
-    endif ()
-
-    if(GLUT_FOUND)
-        message(STATUS "Glut found: '${GLUT_INCLUDE_DIR}', '${GLUT_LIBRARIES}'")
-    else()
-        message(STATUS "Glut include and library variables: '${GLUT_INCLUDE_DIR}', '${GLUT_LIBRARIES}'")
-        message(FATAL_ERROR "Glut not found.  Building without OpenGL is possible.")
-    endif()
-
-    include_directories(${GLUT_INCLUDE_DIR})
+    include_directories(${GLUT_INCLUDE_DIRS})
     list(APPEND DEP_LIBS ${GLUT_LIBRARIES})
 endif()
-
-
-####### Build with LibX11 (only required for static build on Mac) ##########
-
-#if (OPTION_STATIC AND OPTION_USE_OPENGL AND HAVE_OPENGL)
-#	   find_package(X11)
-#	   if (X11_FOUND)
-#        message(STATUS "Found X11: '${X11_INCLUDE_DIR}', '${X11_LIBRARIES}'")
-#    else ()
-#        message(FATAL_ERROR "X11 not found")
-#    endif ()
-#    include_directories(${X11_INCLUDE_DIR})
-#    list(APPEND DEP_LIBS ${X11_LIBRARIES})
-#endif()
 
 
 ####### Option: Build with LibTiff ##########
