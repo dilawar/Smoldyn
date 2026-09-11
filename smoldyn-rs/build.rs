@@ -4,7 +4,8 @@ fn main() {
     // build libsmodlyn_static.a
     let dst = Config::new("..")
         .define("OPTION_PYTHON", "OFF")
-        .define("OPTION_STATIS", "ON")
+        .define("OPTION_STATIC", "ON")
+        .define("OPTION_USE_LIBTIFF", "OFF")
         .build();
 
     println!("cargo:rustc-link-search=native={}/build", dst.display());
