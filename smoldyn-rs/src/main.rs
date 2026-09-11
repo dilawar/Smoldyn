@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 use clap::{Parser, Subcommand};
 
@@ -36,6 +36,7 @@ fn main() {
     };
 
     std::env::set_var("SMOLDYN_LOG", log_level);
+
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_env("SMOLDYN_LOG"))

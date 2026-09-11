@@ -1,5 +1,4 @@
-//! smoldyn library.
-
+///! smoldyn library.
 use libc::c_char;
 use std::ffi::{CStr, CString};
 
@@ -11,11 +10,10 @@ mod ffi {
         include!("Smoldyn/libsmoldyn.h");
 
         type simstruct;
-
         unsafe fn simInitAndLoad(
             fileroot: *const c_char,
             filename: *const c_char,
-            sim: *mut simptr,
+            sim: *mut simstruct,
             flags: *const c_char,
         );
     }
