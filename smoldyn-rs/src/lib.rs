@@ -8,7 +8,7 @@ mod common;
 #[cxx::bridge]
 mod ffi {
     unsafe extern "C++" {
-        include!("./../source/Smoldyn/libsmoldyn.h");
+        include!("Smoldyn/libsmoldyn.h");
 
         type simstruct;
 
@@ -23,6 +23,7 @@ mod ffi {
 
 use std::path::Path;
 
+/// Run smoldyn simulator
 pub fn run(model: &Path, flags: &str) -> anyhow::Result<()> {
     tracing::info!("Running model {:?}", model);
 

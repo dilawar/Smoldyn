@@ -6,5 +6,6 @@ fn main() {
 
     cxx_build::bridge("src/lib.rs")
         .file("../source/python/Simulation.cpp")
+        .include("../source")
         .compile("simulation");
 }
