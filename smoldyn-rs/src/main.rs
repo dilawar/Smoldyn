@@ -35,12 +35,14 @@ fn main() {
         _ => "trace",
     };
 
-    std::env::set_var("SMOLDYN_LOG", log_level);
+    unsafe {
+        std::env::set_var("SMOLDYN_LOG", log_level);
+    }
 
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_env("SMOLDYN_LOG"))
         .init();
 
-    smoldyn::run(&cli.model).expect("failed to run model");
+    smoldyn::run(&cli.model, "").expect("failed to run model");
 }
