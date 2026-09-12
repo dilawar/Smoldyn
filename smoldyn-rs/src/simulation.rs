@@ -18,9 +18,7 @@ unsafe extern "C" {
 /// time.
 ///
 /// The simulation is advanced in `plot_dt` chunks with `smolRunSimUntil` and
-/// [`draw_simulation`] is called synchronously after each chunk. Because the
-/// simulation is not stepping while we read it, the data seen by
-/// `draw_simulation` is consistent (no data race).
+/// [`draw_simulation`] is called synchronously after each chunk.
 pub fn run(
     model: &Path,
     flags: &str,
