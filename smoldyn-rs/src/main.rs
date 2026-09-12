@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    sync::{Arc, atomic::AtomicBool},
+};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 use clap::{Parser, Subcommand};
@@ -53,7 +56,8 @@ fn main() {
     }
 
     if let Some(model) = cli.model {
-        smoldyn::run(&model, "").expect("failed to run model");
+        let stop_me = Arc::new(AtomicBool::new(false));
+        smoldyn::run(&model, "", stop_me).expect("failed to run model");
     }
 }
 

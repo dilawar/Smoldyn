@@ -2,7 +2,9 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
 
 // The Smoldyn C library keeps global error/warning state, so tests that touch it
 // must not run concurrently within the same process.
@@ -35,7 +37,7 @@ fn runs_tiny_model() {
     fs::write(&model, TINY_MODEL).unwrap();
 
     println!("{}", smoldyn::version());
-    smoldyn::run(&model, "").expect("tiny model should run");
+    smoldyn::run(&model, "", Arc::new(AtomicBool::new(true))).expect("tiny model should run");
 }
 
 #[test]
@@ -43,5 +45,5 @@ fn missing_model_fails() {
     let _guard = LOCK.lock().unwrap();
 
     let model = tmp_dir().join("does_not_exist.txt");
-    assert!(smoldyn::run(&model, "").is_err());
+    assert!(smoldyn::run(&model, "", Arc::new(AtomicBool::new(false))).is_err());
 }

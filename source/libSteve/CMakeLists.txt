@@ -2,6 +2,7 @@ set(SRC_FILES
     Geometry.c
     List.c
     math2.c
+    opengl2.c
     parse.c
     queue.c
     random2.c
@@ -15,10 +16,6 @@ set(SRC_FILES
     SurfaceParam.c
     Zn.c
     SFMT/SFMT.c)
-
-if(OPTION_USE_OPENGL)
-  list(APPEND SRC_FILES opengl.c)
-endif()
 
 add_library(Steve OBJECT ${SRC_FILES})
 set_target_properties(Steve PROPERTIES POSITION_INDEPENDENT_CODE ON)
