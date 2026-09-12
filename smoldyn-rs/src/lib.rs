@@ -11,6 +11,7 @@ mod ffi {
         include!("Smoldyn/libsmoldyn.h");
 
         type simstruct;
+
         unsafe fn smolPrepareSimFromFile(
             filepath: *const c_char,
             filename: *const c_char,
