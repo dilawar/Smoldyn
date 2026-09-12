@@ -34,6 +34,7 @@ fn runs_tiny_model() {
     let model = tmp_dir().join("tiny_e2e.txt");
     fs::write(&model, TINY_MODEL).unwrap();
 
+    println!("{}", smoldyn::version());
     smoldyn::run(&model, "").expect("tiny model should run");
 }
 

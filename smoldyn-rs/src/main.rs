@@ -4,14 +4,18 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(about, long_about = None)]
 struct Cli {
     /// smoldyn model
-    model: PathBuf,
+    model: Option<PathBuf>,
 
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
     debug: u8,
+
+    /// version
+    #[arg(long)]
+    version: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -44,5 +48,15 @@ fn main() {
         .with(EnvFilter::from_env("SMOLDYN_LOG"))
         .init();
 
-    smoldyn::run(&cli.model, "").expect("failed to run model");
+    if cli.version {
+        return show_version();
+    }
+
+    if let Some(model) = cli.model {
+        smoldyn::run(&model, "").expect("failed to run model");
+    }
+}
+
+fn show_version() {
+    println!("{}", smoldyn::version());
 }

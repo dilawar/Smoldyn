@@ -1,4 +1,4 @@
-///! smoldyn library.
+//! smoldyn library.
 use std::ffi::CString;
 
 mod common;
@@ -14,10 +14,14 @@ mod ffi {
             filename: *const c_char,
             flags: *const c_char,
         ) -> *mut simstruct;
+
+        unsafe fn smolGetVersion() -> f64;
     }
 }
 
 use std::path::Path;
+
+use crate::ffi::smolGetVersion;
 
 unsafe extern "C" {
     /// `enum ErrorCode smolRunSim(simptr sim)`; `ErrorCode` has the ABI of `int`.
@@ -61,4 +65,11 @@ pub fn run(model: &Path, flags: &str) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// Return smoldyn version
+pub fn version() -> String {
+    let version = unsafe { smolGetVersion() };
+
+    format!("{version}")
 }
