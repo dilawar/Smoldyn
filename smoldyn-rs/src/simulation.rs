@@ -48,6 +48,8 @@ pub fn run(model: &Path, flags: &str, stop_me: Arc<AtomicBool>) -> anyhow::Resul
         error_code == 0,
         "failed to run model {model:?} (smoldyn error code {error_code})",
     );
+
+    // stop everything
     stop_me.store(true, Ordering::Relaxed);
 
     t.join().expect("failed to join");
@@ -55,9 +57,9 @@ pub fn run(model: &Path, flags: &str, stop_me: Arc<AtomicBool>) -> anyhow::Resul
     Ok(())
 }
 
-fn watch_simptr(_sim: ConstSimptr, stop_me: Arc<AtomicBool>) {
+fn watch_simptr(sim: ConstSimptr, stop_me: Arc<AtomicBool>) {
     loop {
-        println!("watching simptr");
+        println!("watching simptr: {sim:?}");
         std::thread::sleep(std::time::Duration::from_secs(1));
         if stop_me.load(Ordering::Relaxed) {
             break;
