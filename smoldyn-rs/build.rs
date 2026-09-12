@@ -20,6 +20,7 @@ fn main() {
     println!("cargo:rustc-link-lib=Xi");
 
     cxx_build::bridge("src/lib.rs")
+        .include("src")
         .include("../source")
         .include(format!("{}/build", dst.display()))
         .compile("simulation");

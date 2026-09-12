@@ -37,7 +37,7 @@ fn runs_tiny_model() {
     fs::write(&model, TINY_MODEL).unwrap();
 
     println!("{}", smoldyn::version());
-    smoldyn::run(&model, "", Arc::new(AtomicBool::new(true))).expect("tiny model should run");
+    smoldyn::run(&model, "", 1.0, Arc::new(AtomicBool::new(false))).expect("tiny model should run");
 }
 
 #[test]
@@ -45,5 +45,5 @@ fn missing_model_fails() {
     let _guard = LOCK.lock().unwrap();
 
     let model = tmp_dir().join("does_not_exist.txt");
-    assert!(smoldyn::run(&model, "", Arc::new(AtomicBool::new(false))).is_err());
+    assert!(smoldyn::run(&model, "", 1.0, Arc::new(AtomicBool::new(false))).is_err());
 }

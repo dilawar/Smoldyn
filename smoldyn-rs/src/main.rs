@@ -20,6 +20,10 @@ struct Cli {
     #[arg(long)]
     version: bool,
 
+    /// Simulated time between draws
+    #[arg(long, default_value_t = 1.0)]
+    plot_dt: f64,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -57,7 +61,7 @@ fn main() {
 
     if let Some(model) = cli.model {
         let stop_me = Arc::new(AtomicBool::new(false));
-        smoldyn::run(&model, "", stop_me).expect("failed to run model");
+        smoldyn::run(&model, "", cli.plot_dt, stop_me).expect("failed to run model");
     }
 }
 

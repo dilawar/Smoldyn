@@ -9,13 +9,26 @@ use crate::common::{self, ConstSimptr, MutSimptr};
 use crate::ffi;
 
 unsafe extern "C" {
-    /// `enum ErrorCode smolRunSim(simptr sim)`; `ErrorCode` has the ABI of `int`.
-    fn smolRunSim(sim: *mut ffi::simstruct) -> i32;
+    /// `enum ErrorCode smolRunSimUntil(simptr sim,double breaktime)`;
+    /// `ErrorCode` has the ABI of `int`.
+    fn smolRunSimUntil(sim: *mut ffi::simstruct, breaktime: f64) -> i32;
 }
 
-/// Run smoldyn simulator
-pub fn run(model: &Path, flags: &str, stop_me: Arc<AtomicBool>) -> anyhow::Result<()> {
+/// Run a smoldyn model, drawing the simulation every `plot_dt` of simulated
+/// time.
+///
+/// The simulation is advanced in `plot_dt` chunks with `smolRunSimUntil` and
+/// [`draw_simulation`] is called synchronously after each chunk. Because the
+/// simulation is not stepping while we read it, the data seen by
+/// `draw_simulation` is consistent (no data race).
+pub fn run(
+    model: &Path,
+    flags: &str,
+    plot_dt: f64,
+    stop_me: Arc<AtomicBool>,
+) -> anyhow::Result<()> {
     tracing::info!("Running model {:?}", model);
+    anyhow::ensure!(plot_dt > 0.0, "plot_dt must be positive");
 
     let mut fileroot = common::path_to_bytes(model.parent().expect("invalid filename"));
     fileroot.push(std::path::MAIN_SEPARATOR as u8);
@@ -35,34 +48,52 @@ pub fn run(model: &Path, flags: &str, stop_me: Arc<AtomicBool>) -> anyhow::Resul
 
     anyhow::ensure!(!sim.is_null(), format!("failed to load model {model:?}"));
 
-    // create a thread to read simptr
-    let watcher_stop = stop_me.clone();
     let const_simptr = ConstSimptr::from(&sim);
-    let t = std::thread::spawn(move || {
-        watch_simptr(const_simptr, watcher_stop);
-    });
+    let (mut now, tmax) = const_simptr
+        .snapshot()
+        .map(|state| (state.time, state.tmax))
+        .unwrap_or((0.0, 0.0));
 
-    // start simulation.
-    let error_code = unsafe { smolRunSim(sim.0) };
-    anyhow::ensure!(
-        error_code == 0,
-        "failed to run model {model:?} (smoldyn error code {error_code})",
-    );
+    // Advance the simulation one `plot_dt` at a time, drawing after each step.
+    while now < tmax {
+        if stop_me.load(Ordering::Relaxed) {
+            tracing::info!("stopping simulation at t={now}");
+            break;
+        }
 
-    // stop everything
-    stop_me.store(true, Ordering::Relaxed);
+        let next = (now + plot_dt).min(tmax);
+        let error_code = unsafe { smolRunSimUntil(sim.0, next) };
+        anyhow::ensure!(
+            error_code == 0,
+            "failed to run model {model:?} until t={next} (smoldyn error code {error_code})",
+        );
 
-    t.join().expect("failed to join");
+        draw_simulation(&const_simptr);
+        now = next;
+    }
 
     Ok(())
 }
 
-fn watch_simptr(sim: ConstSimptr, stop_me: Arc<AtomicBool>) {
-    loop {
-        println!("watching simptr: {sim:?}");
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        if stop_me.load(Ordering::Relaxed) {
-            break;
-        }
+/// Draw the current state of the simulation.
+///
+/// This is called between `plot_dt` chunks, so it is safe to read the
+/// `simstruct` here. Replace the body with the actual plotting code.
+fn draw_simulation(sim: &ConstSimptr) {
+    if let Some(state) = sim.snapshot() {
+        println!("drawing simulation: {state}");
+    }
+    if let Some(eventcounts) = sim.eventcounts() {
+        tracing::debug!("eventcounts: {eventcounts:?}");
+    }
+    if let Some(molecules) = sim.molecules()
+        && !molecules.is_empty()
+    {
+        tracing::debug!(
+            "{} molecules, first {:?} ({:?})",
+            molecules.len(),
+            molecules.position(0),
+            molecules.species_name(0),
+        );
     }
 }
