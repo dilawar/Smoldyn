@@ -5,7 +5,7 @@ fn main() {
     let dst = Config::new("..")
         .define("OPTION_PYTHON", "OFF")
         .define("OPTION_STATIC", "ON")
-        .define("OPTION_USE_OPENGL", "ON")
+        .define("OPTION_USE_OPENGL", "OFF")
         .define("OPTION_USE_LIBTIFF", "OFF")
         .build();
 
