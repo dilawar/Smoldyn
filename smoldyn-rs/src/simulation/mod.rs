@@ -1,5 +1,8 @@
 //! Simulation related functions
 
+pub mod simulation;
+pub use simulation::*;
+
 use std::ffi::CString;
 use std::path::Path;
 use std::sync::Arc;
