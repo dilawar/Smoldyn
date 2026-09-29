@@ -143,11 +143,11 @@ endif()
 #
 set(SRC_FILES
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolbng.c
+ ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolgraphics.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolboxes.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolcmd.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolcomparts.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolfilament.c
- ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolgraphics.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolmolec.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolport.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smollattice.c
@@ -155,8 +155,7 @@ set(SRC_FILES
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolrule.c
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolsim.cpp
  ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolsurface.c
- ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolwall.c
- )
+ ${CMAKE_SOURCE_DIR}/source/Smoldyn/smolwall.c)
 
 set(MAIN_FILES ${CMAKE_SOURCE_DIR}/source/Smoldyn/smoldyn.cpp)
 
