@@ -11,17 +11,14 @@ pub struct Simulation {
 }
 
 impl Simulation {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_model_path(mut self, model_path: PathBuf) -> anyhow::Result<Self> {
-        self.model_path = Some(model_path);
-        Ok(self)
-    }
-
-    pub fn initialize(&mut self) -> anyhow::Result<()> {
-        todo!()
+    pub fn from_model_path(model_path: PathBuf) -> anyhow::Result<Self> {
+        let mut sim = Simulation::new();
+        sim.model_path = Some(model_path);
+        Ok(sim)
     }
 
     pub fn run(&mut self, stop: &AtomicBool) -> anyhow::Result<super::Progress> {

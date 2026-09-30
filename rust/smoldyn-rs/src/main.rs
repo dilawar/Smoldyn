@@ -51,9 +51,11 @@ fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
+    // launch web-server in separate thread.
+
     if let Some(model) = cli.model {
         let stop = stop_on_ctrlc()?;
-        let mut sim = Simulation::new().with_model_path(model)?;
+        let mut sim = Simulation::from_model_path(model)?;
         if sim.run(&stop)? == Progress::Running {
             return Ok(ExitCode::from(130));
         }
