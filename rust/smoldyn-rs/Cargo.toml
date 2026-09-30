@@ -11,3 +11,5 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 libsmoldyn = { path = "../libsmoldyn/" }
 ctrlc = "3.5.2"
+axum = { version = "0.8.9", features = ["ws"] }
+tokio = { version = "1.53.1", features = ["full"] }

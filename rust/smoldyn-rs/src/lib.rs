@@ -5,3 +5,5 @@ pub mod simulation;
 pub use simulation::*;
 
 pub use libsmoldyn::version;
+
+mod server;
