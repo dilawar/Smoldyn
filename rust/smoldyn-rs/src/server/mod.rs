@@ -29,6 +29,7 @@ impl WebServer {
         // Build the router and attach the shared state
         let app = Router::new()
             .route("/", get(Self::root_handler))
+            .route("/version", get(Self::version))
             .with_state(self.state);
 
         // Bind the TCP listener
@@ -40,8 +41,11 @@ impl WebServer {
         axum::serve(listener, app).await.unwrap();
     }
 
-    // 4. Implement route handlers as associated functions using the State extractor
     async fn root_handler(State(state): State<Arc<AppState>>) -> String {
         format!("Welcome to {}!", state.app_name)
+    }
+
+    async fn version(State(state): State<Arc<AppState>>) -> String {
+        state.version.clone()
     }
 }

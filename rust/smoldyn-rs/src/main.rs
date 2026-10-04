@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<ExitCode> {
     }
 
     // launch web-server in separate thread.
-    let _server_thread = std::thread::spawn(|| {
+    let server_thread = std::thread::spawn(|| {
         let rt = tokio::runtime::Runtime::new().expect("failed to create async runtime");
         rt.block_on(async {
             let port = 5555;
@@ -68,6 +68,8 @@ fn main() -> anyhow::Result<ExitCode> {
             return Ok(ExitCode::from(130));
         }
     }
+
+    server_thread.join().unwrap();
 
     Ok(ExitCode::SUCCESS)
 }
