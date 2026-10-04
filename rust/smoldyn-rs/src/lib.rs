@@ -7,3 +7,4 @@ pub use simulation::*;
 pub use libsmoldyn::version;
 
 mod server;
+pub use server::WebServer;

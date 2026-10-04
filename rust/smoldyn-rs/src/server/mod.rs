@@ -1,22 +1,20 @@
-//! server 
+//! server
 
-use axum::{extract::State, routing::get, Router};
+use axum::{Router, extract::State, routing::get};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-pub (crate) struct AppState {
+pub(crate) struct AppState {
     app_name: String,
     version: String,
 }
 
-pub(crate) struct WebServer {
+pub struct WebServer {
     addr: SocketAddr,
     state: Arc<AppState>,
 }
 
-
 impl WebServer {
-
     pub fn new(port: u16) -> Self {
         let addr = SocketAddr::from(([127, 0, 0, 1], port));
         let state = Arc::new(AppState {
@@ -34,10 +32,8 @@ impl WebServer {
             .with_state(self.state);
 
         // Bind the TCP listener
-        let listener = tokio::net::TcpListener::bind(&self.addr)
-            .await
-            .unwrap();
-        
+        let listener = tokio::net::TcpListener::bind(&self.addr).await.unwrap();
+
         println!("Server running on http://{}", self.addr);
 
         // Start the server
@@ -48,5 +44,4 @@ impl WebServer {
     async fn root_handler(State(state): State<Arc<AppState>>) -> String {
         format!("Welcome to {}!", state.app_name)
     }
-
 }
