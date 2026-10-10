@@ -85,7 +85,9 @@ impl WebServer {
 
     // fetch simdata
     async fn simdata(State(_state): State<Arc<AppState>>) -> String {
-        "simdata".to_string()
+        let time = std::time::SystemTime::now();
+
+        format!("t={time:?}")
     }
 
     async fn version(State(state): State<Arc<AppState>>) -> String {
