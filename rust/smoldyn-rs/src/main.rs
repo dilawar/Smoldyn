@@ -83,6 +83,7 @@ fn stop_on_ctrlc() -> anyhow::Result<Arc<AtomicBool>> {
         }
         eprintln!("stopping after the current time step (Ctrl-C again to quit now)");
     })?;
+
     Ok(stop)
 }
 

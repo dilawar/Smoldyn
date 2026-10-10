@@ -1,12 +1,13 @@
 //! server
 
-use axum::{Router, extract::State, routing::get};
+use axum::{Router, extract::State, response::Html, routing::get};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 pub(crate) struct AppState {
     app_name: String,
     version: String,
+    // TODO: some way to fetch simulation data here.
 }
 
 pub struct WebServer {
@@ -29,6 +30,7 @@ impl WebServer {
         // Build the router and attach the shared state
         let app = Router::new()
             .route("/", get(Self::root_handler))
+            .route("/simdata", get(Self::simdata))
             .route("/version", get(Self::version))
             .with_state(self.state);
 
@@ -41,8 +43,16 @@ impl WebServer {
         axum::serve(listener, app).await.unwrap();
     }
 
-    async fn root_handler(State(state): State<Arc<AppState>>) -> String {
-        format!("Welcome to {}!", state.app_name)
+    // generate the web-page here.
+    async fn root_handler(State(_state): State<Arc<AppState>>) -> Html<String> {
+        let index_page = include_str!("./index.html");
+
+        Html(index_page.into())
+    }
+
+    // fetch simdata
+    async fn simdata(State(_state): State<Arc<AppState>>) -> String {
+        "simdata".to_string()
     }
 
     async fn version(State(state): State<Arc<AppState>>) -> String {
