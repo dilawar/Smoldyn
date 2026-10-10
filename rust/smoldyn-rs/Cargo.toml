@@ -14,3 +14,4 @@ ctrlc = "3.5.2"
 axum = { version = "0.8.9", features = ["ws"] }
 tokio = { version = "1.53.1", features = ["full"] }
 topcoat = { version = "0.10.0", features = ["websocket", "ui", "htmx", "anyhow"] }
+tera = { version = "2.4.0", features = ["unicode"] }

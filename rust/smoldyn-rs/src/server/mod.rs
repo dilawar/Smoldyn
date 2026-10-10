@@ -4,15 +4,49 @@ use axum::{Router, extract::State, response::Html, routing::get};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+pub struct WebServer {
+    addr: SocketAddr,
+    state: Arc<AppState>,
+}
+
 pub(crate) struct AppState {
     app_name: String,
     version: String,
     // TODO: some way to fetch simulation data here.
+    template_engine: TemplateEngine,
 }
 
-pub struct WebServer {
-    addr: SocketAddr,
-    state: Arc<AppState>,
+impl AppState {
+    fn render_home_page(&self) -> String {
+        let context = tera::context! {
+            app_name => &self.app_name,
+            app_version => &self.version,
+        };
+
+        self.template_engine
+            .render_index_page(&context)
+            .map_err(|e| tracing::error!(e=?e, "failed to render index.html"))
+            .unwrap_or("failed to render".to_string())
+    }
+}
+
+struct TemplateEngine(tera::Tera);
+
+impl Default for TemplateEngine {
+    fn default() -> Self {
+        let mut engine = tera::Tera::default();
+        engine
+            .add_raw_template("index", include_str!("./index.html"))
+            .expect("failed to load templates");
+
+        Self(engine)
+    }
+}
+
+impl TemplateEngine {
+    pub fn render_index_page(&self, context: &tera::Context) -> anyhow::Result<String> {
+        Ok(self.0.render("index", context)?)
+    }
 }
 
 impl WebServer {
@@ -21,6 +55,7 @@ impl WebServer {
         let state = Arc::new(AppState {
             app_name: "Smoldyn".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
+            template_engine: TemplateEngine::default(),
         });
 
         Self { addr, state }
@@ -44,10 +79,8 @@ impl WebServer {
     }
 
     // generate the web-page here.
-    async fn root_handler(State(_state): State<Arc<AppState>>) -> Html<String> {
-        let index_page = include_str!("./index.html");
-
-        Html(index_page.into())
+    async fn root_handler(State(state): State<Arc<AppState>>) -> Html<String> {
+        Html(state.render_home_page())
     }
 
     // fetch simdata
